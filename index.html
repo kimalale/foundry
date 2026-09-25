@@ -1,0 +1,2388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Foundry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=B612:wght@400;700&family=B612+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* One world: a dark machine-shop bench with a cyanotype drawing sheet, so the theme is fixed dark. */
+  :root {
+    color-scheme: dark;
+    --ground: #0b0d10;
+    --panel: #111418;
+    --raise: #171b21;
+    --line: #222830;
+    --line-hi: #36414e;
+    --text: #e2e7ed;
+    --muted: #808b97;
+    --faint: #4c5663;
+    --blue: #79bff5;
+    --amber: #ffc27a;
+    --red: #ff5a47;
+    --green: #8fdcaa;
+    --violet: #c7a8ff;
+    --sheet: #15396a;
+    --display: "Big Shoulders Display", "Oswald", Impact, sans-serif;
+    --sans: "B612", system-ui, -apple-system, sans-serif;
+    --mono: "B612 Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--ground);
+    background-image: radial-gradient(1100px 600px at 70% -10%, #151b23 0%, transparent 65%);
+    color: var(--text);
+    font: 13px/1.5 var(--sans);
+    padding: 20px 16px 40px;
+    min-height: 100vh;
+  }
+  button, select, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .wrap { max-width: 1560px; margin: 0 auto; display: grid; gap: 14px; }
+
+  /* ---------- masthead ---------- */
+  header.top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 14px 40px; }
+  .brand { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+  h1 {
+    margin: 0; font: 800 clamp(44px, 6vw, 72px)/.8 var(--display); letter-spacing: .02em; text-transform: uppercase;
+    background: linear-gradient(180deg, #fff 0%, #cfd6de 48%, #7d8894 52%, #c9d0d8 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .brand p { margin: 0 0 2px; max-width: 64ch; color: var(--muted); text-wrap: pretty; }
+  .brand code { font-family: var(--mono); color: var(--amber); font-size: .95em; }
+  .telemetry { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; font-family: var(--mono); }
+  .telemetry div { display: grid; gap: 1px; }
+  .telemetry dt { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .telemetry dd { margin: 0; font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #tFit.pass { color: var(--red); }
+
+  /* ---------- bench layout ---------- */
+  .bench {
+    display: grid; gap: 14px;
+    grid-template-columns: minmax(330px, 440px) minmax(0, 1fr);
+    grid-template-areas: "src view" "jobs sheet";
+  }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 0; display: flex; flex-direction: column; }
+  .bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding: 8px 10px 8px 12px; border-bottom: 1px solid var(--line);
+    font: 700 10.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  }
+  .bar .r { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .btn, select.btn {
+    background: var(--raise); border: 1px solid var(--line-hi); border-radius: 4px; padding: 5px 9px;
+    font: 400 11.5px/1.2 var(--mono); letter-spacing: .02em; text-transform: none; cursor: pointer; color: var(--text);
+  }
+  .btn:hover { border-color: var(--blue); }
+  .btn[aria-pressed="true"] { border-color: var(--blue); color: var(--blue); background: #14202c; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.red[aria-pressed="true"] { border-color: var(--red); color: var(--red); background: #2a1512; }
+  .seg { display: inline-flex; }
+  .seg .btn { border-radius: 0; margin-left: -1px; }
+  .seg .btn:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+  .seg .btn:last-child { border-radius: 0 4px 4px 0; }
+
+  /* ---------- source editor ---------- */
+  .src { grid-area: src; height: clamp(520px, 74vh, 860px); }
+  .code { position: relative; flex: 1; min-height: 200px; background: #0c0f13; overflow: hidden; }
+  .code textarea, .code pre {
+    position: absolute; inset: 0; margin: 0; padding: 12px 14px 40px;
+    font: 12.5px/20px var(--code); tab-size: 2; white-space: pre; border: 0;
+  }
+  .code textarea {
+    width: 100%; height: 100%; resize: none; background: transparent; color: transparent; caret-color: var(--amber);
+    outline: none; overflow: auto;
+  }
+  .code textarea::selection { background: rgba(121, 191, 245, .28); color: transparent; }
+  .code pre { pointer-events: none; color: #c9d1da; overflow: hidden; }
+  .code pre .c { color: #5d6977; font-style: italic; }
+  .code pre .n { color: var(--amber); }
+  .code pre .s { color: var(--green); }
+  .code pre .f { color: var(--blue); }
+  .code pre .m { color: #a9d4f8; }
+  .code pre .k { color: var(--violet); }
+  #errLine { position: absolute; left: 0; right: 0; height: 20px; background: rgba(255, 90, 71, .13); border-left: 2px solid var(--red); pointer-events: none; display: none; }
+  #shared { display: none; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 12px; background: #2a1d0e; border-bottom: 1px solid #5a3d17; color: var(--amber); font-size: 12px; }
+  #shared.on { display: flex; }
+  .params { display: grid; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); max-height: 34%; overflow: auto; }
+  .params:empty { display: none; }
+  .param { display: grid; grid-template-columns: minmax(70px, 118px) 1fr 58px; gap: 10px; align-items: center; font: 11.5px var(--mono); }
+  .param span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .param output { text-align: right; font-variant-numeric: tabular-nums; color: var(--amber); }
+  input[type=range] { width: 100%; accent-color: var(--blue); }
+  .status { padding: 7px 12px; border-top: 1px solid var(--line); font: 11px/1.45 var(--mono); color: var(--muted); min-height: 32px; }
+  .status.err { color: var(--red); }
+  .status.warn { color: var(--amber); }
+  details.ref { border-top: 1px solid var(--line); font: 11px/1.6 var(--mono); }
+  details.ref summary { padding: 7px 12px; cursor: pointer; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-size: 10.5px; font-weight: 700; }
+  details.ref div { padding: 0 12px 10px; max-height: 240px; overflow: auto; }
+  details.ref dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
+  details.ref dt { color: var(--blue); white-space: nowrap; }
+  details.ref dd { margin: 0; color: var(--muted); }
+  details.ref h4 { margin: 10px 0 4px; font: 700 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--text); }
+
+  /* ---------- 3D viewport ---------- */
+  .view { grid-area: view; position: relative; overflow: hidden; height: clamp(520px, 74vh, 860px); background: #07080a; }
+  .view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #ov { cursor: grab; touch-action: none; }
+  #ov.measuring { cursor: crosshair; }
+  #ov:active { cursor: grabbing; }
+  .tools { position: absolute; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; pointer-events: none; }
+  .tools > * { pointer-events: auto; }
+  .tools .btn, .tools select { background: rgba(17, 20, 24, .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .tl { top: 10px; left: 10px; right: 50%; }
+  .tr { top: 10px; right: 10px; justify-content: flex-end; max-width: 50%; }
+  .bl { bottom: 10px; left: 10px; right: 45%; }
+  .br { bottom: 10px; right: 10px; justify-content: flex-end; }
+  .sec-slider { display: none; align-items: center; gap: 8px; background: rgba(17,20,24,.78); border: 1px solid var(--line-hi); border-radius: 4px; padding: 3px 9px; font: 11px var(--mono); color: var(--muted); }
+  .sec-slider.on { display: flex; }
+  .sec-slider input { width: 120px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.4); }
+  .readout {
+    position: absolute; left: 10px; top: 46px; font: 11px/1.5 var(--mono); color: var(--muted);
+    background: rgba(11, 13, 16, .72); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px;
+    pointer-events: none; font-variant-numeric: tabular-nums; max-width: calc(100% - 20px);
+  }
+  .readout:empty { display: none; }
+  .readout b { color: var(--text); font-weight: 400; }
+  .readout em { color: var(--blue); font-style: normal; }
+  .readout .rd { color: var(--red); }
+  .pending { position: absolute; right: 12px; top: 48px; font: 11px var(--mono); color: var(--amber); display: none; }
+  .pending.on { display: block; }
+
+  /* ---------- commissions ---------- */
+  .jobs { grid-area: jobs; }
+  .jobs ol { list-style: none; margin: 0; padding: 6px; display: grid; gap: 4px; }
+  .job {
+    width: 100%; text-align: left; display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 10px; align-items: baseline;
+    background: none; border: 1px solid transparent; border-radius: 4px; padding: 7px 8px; cursor: pointer;
+  }
+  .job:hover { background: var(--raise); }
+  .job[aria-current="true"] { background: #13202d; border-color: #2a4660; }
+  .job .no { font: 700 11px var(--mono); color: var(--faint); white-space: nowrap; }
+  .jobs li.tier { padding: 10px 8px 3px; font: 400 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .jobs li.tier b { color: var(--muted); font-weight: 700; }
+  .jobs li.tier:first-child { padding-top: 4px; }
+  .job { grid-template-columns: 34px 1fr auto; }
+  .job .nm { font: 700 14px/1.2 var(--sans); }
+  .job .st { font: 700 9.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .job .st.done { color: var(--red); }
+  .job .bf { grid-column: 2 / 4; color: var(--muted); font-size: 12px; display: none; }
+  .job[aria-current="true"] .bf { display: block; }
+  .job .hint { color: var(--blue); font: 11px var(--mono); display: block; margin-top: 4px; }
+  .job.locked .nm { color: var(--faint); }
+  .fit { padding: 10px 12px 12px; border-top: 1px solid var(--line); display: grid; gap: 7px; margin-top: auto; }
+  .fit-bar { position: relative; height: 8px; background: #0b0e12; border: 1px solid var(--line-hi); border-radius: 2px; overflow: hidden; }
+  .fit-bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, #2c5d88, var(--blue)); transition: width .25s; }
+  .fit-bar.pass i { background: var(--red); }
+  .fit-bar b { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--red); left: 98.5%; }
+  .fit-row { display: flex; justify-content: space-between; gap: 10px; font: 11px var(--mono); color: var(--muted); flex-wrap: wrap; }
+  .fit-row b { color: var(--text); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+  /* ---------- drawing sheet ---------- */
+  .sheetp { grid-area: sheet; }
+  .sheetwrap { position: relative; }
+  #sheet { width: 100%; aspect-ratio: 297 / 210; display: block; border-radius: 0 0 6px 6px; cursor: crosshair; }
+  #sheetOv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  footer { color: var(--faint); font: 11px/1.7 var(--mono); display: flex; flex-wrap: wrap; gap: 4px 18px; }
+  footer kbd { font: inherit; color: var(--muted); border: 1px solid var(--line-hi); border-radius: 3px; padding: 0 4px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .25s;
+    background: var(--raise); border: 1px solid var(--line-hi); border-radius: 5px; padding: 8px 14px; font: 12px var(--mono); pointer-events: none; z-index: 10;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #selftest { white-space: pre-wrap; font: 11px var(--mono); }
+
+  @media (max-width: 960px) {
+    .bench { grid-template-columns: minmax(0, 1fr); grid-template-areas: "view" "src" "sheet" "jobs"; }
+    .src { height: 560px; }
+    .view { height: min(72vh, 560px); }
+    .tl, .tr, .bl { right: auto; left: 10px; max-width: calc(100% - 20px); }
+    .tr { top: 46px; justify-content: flex-start; }
+    .readout { top: 84px; }
+    .bl { bottom: 50px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Foundry</h1>
+      <p>A CAD bench where every part is a <b>signed distance field</b>: a function that tells any point in space how far it is from the surface. A union is <code>min</code>, a cut is <code>max</code>, and a fillet is a soft minimum. Type a part and it is cast.</p>
+    </div>
+    <dl class="telemetry">
+      <div><dt>Envelope mm</dt><dd id="tEnv">—</dd></div>
+      <div><dt>Volume</dt><dd id="tVol">—</dd></div>
+      <div><dt>Mass</dt><dd id="tMass">—</dd></div>
+      <div><dt>Field nodes</dt><dd id="tNodes">—</dd></div>
+      <div><dt>Fit</dt><dd id="tFit">—</dd></div>
+    </dl>
+  </header>
+
+  <main class="bench">
+    <section class="panel src" aria-label="Part source">
+      <div class="bar">
+        <span>Part source</span>
+        <div class="r">
+          <select id="preset" class="btn" aria-label="Load a part from the parts bin">
+            <option value="">Parts bin…</option>
+          </select>
+          <button id="shareBtn" class="btn" type="button">Share</button>
+        </div>
+      </div>
+      <div id="shared"><span>This link carries code. Read it before it runs.</span><button id="runShared" class="btn" type="button">Run it</button></div>
+      <div class="code">
+        <div id="errLine"></div>
+        <pre id="hl" aria-hidden="true"></pre>
+        <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Part code"></textarea>
+      </div>
+      <div id="params" class="params" aria-label="Parameters"></div>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <details class="ref">
+        <summary>Reference</summary>
+        <div>
+          Sizes are mm. Every solid is centred on the origin, Z is up. The last line is the part.
+          <h4>Solids</h4>
+          <dl>
+            <dt>box(w, d, h)</dt><dd>block; box(s) is a cube</dd>
+            <dt>cyl(Ø, h)</dt><dd>cylinder along Z</dd>
+            <dt>sphere(Ø)</dt><dd></dd>
+            <dt>cone(Ø1, Ø2, h)</dt><dd>frustum, Ø1 at the bottom</dd>
+            <dt>torus(Ø, tubeØ)</dt><dd>ring around Z (centreline Ø)</dd>
+            <dt>hex(flats, h)</dt><dd>hex prism, flats facing ±Y</dd>
+            <dt>gyroid(cell, wall)</dt><dd>infinite lattice; intersect it with a solid</dd>
+          </dl>
+          <h4>Sketches (2D)</h4>
+          <dl>
+            <dt>rect(w, h)</dt><dd>rectangle; rect(s) is a square</dd>
+            <dt>circle(Ø)</dt><dd></dd>
+            <dt>ngon(n, Ø)</dt><dd>regular polygon, a corner on +X</dd>
+            <dt>polygon([[x, y], …])</dt><dd>any closed outline</dd>
+            <dt>arc(Ø, width, °)</dt><dd>curved band with round ends, centred on +X</dd>
+            <dt>text('ABC', h)</dt><dd>stroke font, A–Z 0–9 - . / + : °</dd>
+            <dt>.offset(r)</dt><dd>grow (or shrink, r &lt; 0) with round corners</dd>
+            <dt>.extrude(h, r)</dt><dd>to a solid h tall, edges rounded r</dd>
+            <dt>.revolve(offset)</dt><dd>spin about Z: x is radius, y is height</dd>
+            <dt></dt><dd>Sketches take add / cut / and, move(x, y), rot(°), mirror, polar, array, shell, scale.</dd>
+          </dl>
+          <h4>Booleans</h4>
+          <dl>
+            <dt>a.add(b, blend)</dt><dd>union; blend in mm is optional</dd>
+            <dt>a.cut(b, blend)</dt><dd>subtract</dd>
+            <dt>a.and(b, blend)</dt><dd>intersect</dd>
+            <dt>union(a, b, …)</dt><dd></dd>
+          </dl>
+          <h4>Placing</h4>
+          <dl>
+            <dt>.move(x, y, z)</dt><dd></dd>
+            <dt>.rot(x°, y°, z°)</dt><dd>X first, then Y, then Z</dd>
+            <dt>.mirror('xy')</dt><dd>reflect the + side across the named axes</dd>
+            <dt>.scale(s)</dt><dd>uniform</dd>
+          </dl>
+          <h4>Patterns and forms</h4>
+          <dl>
+            <dt>.polar(n)</dt><dd>n copies around Z; the original sits on +X</dd>
+            <dt>.array(n, dx, dy, dz)</dt><dd>n copies, one step apart</dd>
+            <dt>.stretch(x, y, z)</dt><dd>lengthen by pulling apart: a cylinder becomes a slot</dd>
+            <dt>.round(r)</dt><dd>grow by r, rounding every edge</dd>
+            <dt>.shell(t)</dt><dd>hollow skin t thick</dd>
+            <dt>.twist(°/mm)</dt><dd>twist about Z</dd>
+          </dl>
+          <h4>Inputs</h4>
+          <dl>
+            <dt>param(name, v, min, max, step)</dt><dd>a live slider</dd>
+            <dt>PI sin cos tan sqrt hypot</dt><dd>maths helpers</dd>
+          </dl>
+        </div>
+      </details>
+    </section>
+
+    <section class="panel view" aria-label="3D view">
+      <canvas id="gl"></canvas>
+      <canvas id="ov" tabindex="0" aria-label="Part view. Drag to orbit, right-drag or shift-drag to pan, scroll to zoom."></canvas>
+      <div class="tools tl">
+        <div class="seg" role="group" aria-label="Views">
+          <button class="btn" data-view="iso" type="button" title="1">Iso</button>
+          <button class="btn" data-view="top" type="button" title="2">Top</button>
+          <button class="btn" data-view="front" type="button" title="3">Front</button>
+          <button class="btn" data-view="right" type="button" title="4">Right</button>
+        </div>
+        <button id="frameBtn" class="btn" type="button" title="F">Frame</button>
+        <button id="orthoBtn" class="btn" type="button" aria-pressed="false" title="O">Ortho</button>
+      </div>
+      <div class="tools tr">
+        <div class="seg" role="group" aria-label="Section plane">
+          <button class="btn" data-sec="" type="button" aria-pressed="true">No cut</button>
+          <button class="btn" data-sec="x" type="button" aria-pressed="false">X</button>
+          <button class="btn" data-sec="y" type="button" aria-pressed="false">Y</button>
+          <button class="btn" data-sec="z" type="button" aria-pressed="false">Z</button>
+        </div>
+        <div id="secSlider" class="sec-slider">
+          <input id="secPos" type="range" min="0" max="1" step="0.001" value="0.5" aria-label="Section position">
+          <button id="secFlip" class="btn" type="button" title="Flip which side is removed">⇄</button>
+        </div>
+      </div>
+      <div id="readout" class="readout"></div>
+      <div id="pending" class="pending">compiling shader…</div>
+      <div class="tools bl" id="mats" role="group" aria-label="Material"></div>
+      <div class="tools br">
+        <button id="measureBtn" class="btn red" type="button" aria-pressed="false" title="M">Measure</button>
+        <select id="stlRes" class="btn" aria-label="Mesh resolution">
+          <option value="96">Draft</option>
+          <option value="144" selected>Fine</option>
+          <option value="210">Max</option>
+        </select>
+        <button id="stlBtn" class="btn" type="button" title="E">Export STL</button>
+      </div>
+    </section>
+
+    <section class="panel jobs" aria-label="Commissions">
+      <div class="bar"><span>Commissions</span><span id="jobCount">I 0/7 · II 0/6</span></div>
+      <ol id="jobList"></ol>
+      <div class="fit">
+        <div class="fit-row"><span id="fitLabel">Pick a commission to be graded against it.</span><b id="fitNum"></b></div>
+        <div id="fitBar" class="fit-bar"><i id="fitFill"></i><b></b></div>
+        <div class="fit-row"><span id="fitNote">Volume overlap with the drawing, aligned by envelope centre. 98.5% stamps it.</span></div>
+      </div>
+    </section>
+
+    <section class="panel sheetp" aria-label="Drawing sheet">
+      <div class="bar">
+        <span>Drawing</span>
+        <div class="r">
+          <div class="seg" role="group" aria-label="Drawing shows">
+            <button id="sheetPart" class="btn" type="button" aria-pressed="true">Your part</button>
+            <button id="sheetJob" class="btn" type="button" aria-pressed="false" disabled>Commission</button>
+          </div>
+          <button id="pngBtn" class="btn" type="button">PNG</button>
+        </div>
+      </div>
+      <div class="sheetwrap"><canvas id="sheet" role="img" aria-label="Engineering drawing of the part"></canvas><canvas id="sheetOv" aria-hidden="true"></canvas></div>
+    </section>
+  </main>
+
+  <footer>
+    <span><kbd>1</kbd>–<kbd>4</kbd> views</span><span><kbd>F</kbd> frame</span><span><kbd>O</kbd> ortho</span>
+    <span><kbd>S</kbd> section</span><span><kbd>M</kbd> measure</span><span><kbd>E</kbd> export STL</span>
+    <span>double-click the part to orbit around that point</span><span>hover the floor to see the field</span>
+  </footer>
+  <pre id="selftest" hidden></pre>
+</div>
+<div id="toast" class="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const DEG = Math.PI / 180;
+const INF = 1e9;
+const niceStep = x => { const p = Math.pow(10, Math.floor(Math.log10(x))); const m = x / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; };
+
+/* =====================================================================
+   The language. A part is a tree of nodes; every Shape carries a
+   conservative bounding box [x0,y0,z0,x1,y1,z1] so the renderer knows
+   where to look and the analysis knows where to sample.
+   ===================================================================== */
+function num(v, what) {
+  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`${what} needs a number, got ${typeof v === 'object' ? 'a shape' : v}`);
+  return v;
+}
+function pos(v, what) { num(v, what); if (v <= 0) throw new Error(`${what} must be greater than 0`); return v; }
+function isShape(v, what) {
+  if (v instanceof Sketch) throw new Error(`${what} got a 2D sketch: turn it into a solid first with .extrude(h) or .revolve()`);
+  if (!(v instanceof Shape)) throw new Error(`${what} needs a shape`); return v;
+}
+function isSketch(v, what) {
+  if (v instanceof Shape) throw new Error(`${what} got a solid, but sketches only combine with sketches`);
+  if (!(v instanceof Sketch)) throw new Error(`${what} needs a sketch`); return v;
+}
+const sym = (x, y, z) => [-x, -y, -z, x, y, z];
+const unbounded = b => b.some(v => Math.abs(v) >= INF * 0.5);
+const pad = (b, r) => unbounded(b) ? b : [b[0] - r, b[1] - r, b[2] - r, b[3] + r, b[4] + r, b[5] + r];
+const joinB = (a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[3], b[3]), Math.max(a[4], b[4]), Math.max(a[5], b[5])];
+const meetB = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2]), Math.min(a[3], b[3]), Math.min(a[4], b[4]), Math.min(a[5], b[5])];
+const centreB = b => [(b[0] + b[3]) / 2, (b[1] + b[4]) / 2, (b[2] + b[5]) / 2];
+const sizeB = b => [b[3] - b[0], b[4] - b[1], b[5] - b[2]];
+function radialB(b) {
+  if (unbounded(b)) return b;
+  let r = 0;
+  for (const x of [b[0], b[3]]) for (const y of [b[1], b[4]]) r = Math.max(r, Math.hypot(x, y));
+  return [-r, -r, b[2], r, r, b[5]];
+}
+function mat3mul(a, b) {
+  const o = new Array(9);
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) o[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j];
+  return o;
+}
+function xformB(b, R) {
+  if (unbounded(b)) return b;
+  const o = [INF, INF, INF, -INF, -INF, -INF];
+  for (const x of [b[0], b[3]]) for (const y of [b[1], b[4]]) for (const z of [b[2], b[5]]) {
+    const p = [R[0] * x + R[1] * y + R[2] * z, R[3] * x + R[4] * y + R[5] * z, R[6] * x + R[7] * y + R[8] * z];
+    for (let k = 0; k < 3; k++) { o[k] = Math.min(o[k], p[k]); o[k + 3] = Math.max(o[k + 3], p[k]); }
+  }
+  return o;
+}
+
+class Shape {
+  constructor(n, b) { this.n = n; this.b = b; }
+  add(...a) { return boolean('u', this, a, 'add'); }
+  cut(...a) { return boolean('s', this, a, 'cut'); }
+  and(...a) { return boolean('i', this, a, 'and'); }
+  move(x = 0, y = 0, z = 0) {
+    num(x, '.move() x'); num(y, '.move() y'); num(z, '.move() z');
+    const b = this.b;
+    return new Shape({ t: 'mv', a: [x, y, z], c: this.n }, unbounded(b) ? b : [b[0] + x, b[1] + y, b[2] + z, b[3] + x, b[4] + y, b[5] + z]);
+  }
+  rot(x = 0, y = 0, z = 0) {
+    num(x, '.rot() x'); num(y, '.rot() y'); num(z, '.rot() z');
+    const [cx, sx, cy, sy, cz, sz] = [Math.cos(x * DEG), Math.sin(x * DEG), Math.cos(y * DEG), Math.sin(y * DEG), Math.cos(z * DEG), Math.sin(z * DEG)];
+    const Rx = [1, 0, 0, 0, cx, -sx, 0, sx, cx], Ry = [cy, 0, sy, 0, 1, 0, -sy, 0, cy], Rz = [cz, -sz, 0, sz, cz, 0, 0, 0, 1];
+    const R = mat3mul(Rz, mat3mul(Ry, Rx));
+    const M = [R[0], R[3], R[6], R[1], R[4], R[7], R[2], R[5], R[8]];   // the field is sampled with the inverse rotation
+    return new Shape({ t: 'rot', m: M, c: this.n }, xformB(this.b, R));
+  }
+  round(r) { pos(r, '.round()'); return new Shape({ t: 'rnd', a: [r], c: this.n }, pad(this.b, r)); }
+  shell(t) { pos(t, '.shell()'); return new Shape({ t: 'shl', a: [t / 2], c: this.n }, pad(this.b, t / 2)); }
+  mirror(axes = 'x') {
+    if (typeof axes !== 'string') throw new Error(".mirror() takes axes as text, e.g. .mirror('xy')");
+    const m = ['x', 'y', 'z'].map(a => axes.toLowerCase().includes(a) ? 1 : 0);
+    if (!m.some(Boolean)) throw new Error(".mirror() needs at least one of x, y, z");
+    const b = this.b.slice();
+    if (!unbounded(b)) for (let k = 0; k < 3; k++) if (m[k]) { const e = Math.max(Math.abs(b[k]), Math.abs(b[k + 3])); b[k] = -e; b[k + 3] = e; }
+    return new Shape({ t: 'mir', a: m, c: this.n }, b);
+  }
+  polar(n) {
+    n = Math.round(num(n, '.polar()')); if (n < 1) throw new Error('.polar() needs at least 1 copy');
+    return new Shape({ t: 'pol', a: [n], c: this.n }, radialB(this.b));
+  }
+  array(n, x = 0, y = 0, z = 0) {
+    n = Math.round(num(n, '.array() count')); if (n < 1) throw new Error('.array() needs at least 1 copy');
+    num(x, '.array() dx'); num(y, '.array() dy'); num(z, '.array() dz');
+    if (x === 0 && y === 0 && z === 0) throw new Error('.array() needs a step, e.g. .array(4, 10, 0, 0)');
+    const b = this.b, k = n - 1;
+    const far = unbounded(b) ? b : [b[0] + x * k, b[1] + y * k, b[2] + z * k, b[3] + x * k, b[4] + y * k, b[5] + z * k];
+    return new Shape({ t: 'arr', a: [n, x, y, z], c: this.n }, joinB(b, far));
+  }
+  twist(dpm) {
+    num(dpm, '.twist()');
+    const k = dpm * DEG, rb = radialB(this.b);
+    // Twisting stretches the field, so distances are divided by its worst-case stretch (the Lipschitz bound).
+    const lip = unbounded(rb) ? 1 : Math.sqrt(1 + (k * rb[3]) ** 2);
+    return new Shape({ t: 'twi', a: [k, 1 / lip], c: this.n }, rb);
+  }
+  scale(s) {
+    pos(s, '.scale()'); const b = this.b;
+    return new Shape({ t: 'scl', a: [s], c: this.n }, unbounded(b) ? b : b.map(v => v * s));
+  }
+  stretch(x = 0, y = 0, z = 0) {
+    for (const [v, a] of [[x, 'x'], [y, 'y'], [z, 'z']]) { num(v, `.stretch() ${a}`); if (v < 0) throw new Error('.stretch() lengths cannot be negative'); }
+    const b = this.b, h = [x / 2, y / 2, z / 2];
+    return new Shape({ t: 'elo', a: h, c: this.n }, unbounded(b) ? b : [b[0] - h[0], b[1] - h[1], b[2] - h[2], b[3] + h[0], b[4] + h[1], b[5] + h[2]]);
+  }
+}
+function boolean(t, first, args, name) {
+  let k = 0;
+  if (args.length && typeof args[args.length - 1] === 'number') { k = args.pop(); if (!(k >= 0)) throw new Error(`.${name}() blend must be 0 or more`); }
+  const list = args.flat(Infinity);
+  if (!list.length) throw new Error(`.${name}() needs a shape`);
+  list.forEach(s => isShape(s, `.${name}()`));
+  if (t === 's') { let r = first; for (const s of list) r = new Shape({ t: 's', k, c: [r.n, s.n] }, r.b); return r; }
+  let b = first.b;
+  for (const s of list) b = t === 'u' ? joinB(b, s.b) : meetB(b, s.b);
+  return new Shape({ t, k, c: [first.n, ...list.map(s => s.n)] }, t === 'u' ? pad(b, k * 0.25) : b);
+}
+function box(...a) {
+  if (a.length === 2 || a.length > 3) throw new Error('box takes (size) for a cube or (w, d, h)');
+  const [w, d = w, h = w] = a;
+  pos(w, 'box w'); pos(d, 'box d'); pos(h, 'box h');
+  return new Shape({ t: 'box', a: [w / 2, d / 2, h / 2] }, sym(w / 2, d / 2, h / 2));
+}
+function cyl(d, h) { pos(d, 'cyl Ø'); pos(h, 'cyl h'); return new Shape({ t: 'cyl', a: [d / 2, h / 2] }, sym(d / 2, d / 2, h / 2)); }
+function sphere(d) { pos(d, 'sphere Ø'); return new Shape({ t: 'sph', a: [d / 2] }, sym(d / 2, d / 2, d / 2)); }
+function cone(d1, d2, h) {
+  num(d1, 'cone Ø1'); num(d2, 'cone Ø2'); pos(h, 'cone h');
+  if (d1 < 0 || d2 < 0 || d1 + d2 === 0) throw new Error('cone diameters must be 0 or more, and not both 0');
+  const r = Math.max(d1, d2) / 2;
+  return new Shape({ t: 'cone', a: [d1 / 2, d2 / 2, h / 2] }, sym(r, r, h / 2));
+}
+function torus(D, d) {
+  pos(D, 'torus Ø'); pos(d, 'torus tube Ø'); if (d >= D) throw new Error('torus tube Ø must be smaller than its centreline Ø');
+  const e = D / 2 + d / 2;
+  return new Shape({ t: 'tor', a: [D / 2, d / 2] }, sym(e, e, d / 2));
+}
+function hex(f, h) { pos(f, 'hex flats'); pos(h, 'hex h'); const a = f / 2; return new Shape({ t: 'hex', a: [a, h / 2] }, sym(a * 2 / Math.sqrt(3), a, h / 2)); }
+function gyroid(cell, wall) { pos(cell, 'gyroid cell'); pos(wall, 'gyroid wall'); return new Shape({ t: 'gyr', a: [2 * Math.PI / cell, wall / 2] }, sym(INF, INF, INF)); }
+function union(...a) { const list = a.flat(Infinity); if (!list.length) throw new Error('union() needs shapes'); isShape(list[0], 'union()'); return list.length === 1 ? list[0] : list[0].add(...list.slice(1)); }
+
+/* ---------- sketches: 2D fields, pulled up into solids ---------- */
+const sym2 = (x, y) => [-x, -y, x, y];
+const pad2 = (b, r) => [b[0] - r, b[1] - r, b[2] + r, b[3] + r];
+const join2 = (a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
+const meet2 = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+const radial2 = b => { let r = 0; for (const x of [b[0], b[2]]) for (const y of [b[1], b[3]]) r = Math.max(r, Math.hypot(x, y)); return sym2(r, r); };
+class Sketch {
+  constructor(n, b) { this.n = n; this.b = b; }
+  add(...a) { return boolean2('u', this, a, 'add'); }
+  cut(...a) { return boolean2('s', this, a, 'cut'); }
+  and(...a) { return boolean2('i', this, a, 'and'); }
+  move(x = 0, y = 0) {
+    num(x, '.move() x'); num(y, '.move() y'); const b = this.b;
+    return new Sketch({ t: 'mv2', a: [x, y], c: this.n }, [b[0] + x, b[1] + y, b[2] + x, b[3] + y]);
+  }
+  rot(deg = 0) {
+    num(deg, '.rot()'); const c = Math.cos(deg * DEG), s = Math.sin(deg * DEG), b = this.b;
+    const o = [INF, INF, -INF, -INF];
+    for (const x of [b[0], b[2]]) for (const y of [b[1], b[3]]) { const X = c * x - s * y, Y = s * x + c * y; o[0] = Math.min(o[0], X); o[1] = Math.min(o[1], Y); o[2] = Math.max(o[2], X); o[3] = Math.max(o[3], Y); }
+    return new Sketch({ t: 'rot2', a: [c, s], c: this.n }, o);
+  }
+  mirror(axes = 'x') {
+    if (typeof axes !== 'string') throw new Error(".mirror() takes axes as text, e.g. .mirror('xy')");
+    const m = ['x', 'y'].map(a => axes.toLowerCase().includes(a) ? 1 : 0);
+    if (!m.some(Boolean)) throw new Error(".mirror() on a sketch needs x or y");
+    const b = this.b.slice();
+    for (let k = 0; k < 2; k++) if (m[k]) { const e = Math.max(Math.abs(b[k]), Math.abs(b[k + 2])); b[k] = -e; b[k + 2] = e; }
+    return new Sketch({ t: 'mir2', a: m, c: this.n }, b);
+  }
+  polar(n) {
+    n = Math.round(num(n, '.polar()')); if (n < 1) throw new Error('.polar() needs at least 1 copy');
+    return new Sketch({ t: 'pol2', a: [n], c: this.n }, radial2(this.b));
+  }
+  array(n, x = 0, y = 0) {
+    n = Math.round(num(n, '.array() count')); if (n < 1) throw new Error('.array() needs at least 1 copy');
+    num(x, '.array() dx'); num(y, '.array() dy');
+    if (x === 0 && y === 0) throw new Error('.array() needs a step, e.g. .array(4, 10, 0)');
+    const b = this.b, k = n - 1;
+    return new Sketch({ t: 'arr2', a: [n, x, y], c: this.n }, join2(b, [b[0] + x * k, b[1] + y * k, b[2] + x * k, b[3] + y * k]));
+  }
+  offset(r) { num(r, '.offset()'); return new Sketch({ t: 'off2', a: [r], c: this.n }, r > 0 ? pad2(this.b, r) : this.b); }
+  shell(t) { pos(t, '.shell()'); return new Sketch({ t: 'shl2', a: [t / 2], c: this.n }, pad2(this.b, t / 2)); }
+  scale(k) { pos(k, '.scale()'); return new Sketch({ t: 'scl2', a: [k], c: this.n }, this.b.map(v => v * k)); }
+  extrude(h, r = 0) {
+    pos(h, '.extrude() height'); num(r, '.extrude() edge radius');
+    if (r < 0 || r >= h / 2) throw new Error('.extrude() edge radius must be at least 0 and under half the height');
+    const b = this.b;
+    return new Shape({ t: 'ext', a: [h / 2, r], c: this.n }, [b[0], b[1], -h / 2, b[2], b[3], h / 2]);
+  }
+  revolve(offset = 0) {
+    num(offset, '.revolve() offset');
+    const b = this.b, R = Math.max(Math.abs(b[0]), Math.abs(b[2])) + Math.abs(offset);
+    return new Shape({ t: 'rev', a: [offset], c: this.n }, [-R, -R, b[1], R, R, b[3]]);
+  }
+}
+function boolean2(t, first, args, name) {
+  let k = 0;
+  if (args.length && typeof args[args.length - 1] === 'number') { k = args.pop(); if (!(k >= 0)) throw new Error(`.${name}() blend must be 0 or more`); }
+  const list = args.flat(Infinity);
+  if (!list.length) throw new Error(`.${name}() needs a sketch`);
+  list.forEach(s => isSketch(s, `.${name}()`));
+  if (t === 's') { let r = first; for (const s of list) r = new Sketch({ t: 's', k, c: [r.n, s.n] }, r.b); return r; }
+  let b = first.b;
+  for (const s of list) b = t === 'u' ? join2(b, s.b) : meet2(b, s.b);
+  return new Sketch({ t, k, c: [first.n, ...list.map(s => s.n)] }, t === 'u' ? pad2(b, k * 0.25) : b);
+}
+function rect(w, h = w) { pos(w, 'rect w'); pos(h, 'rect h'); return new Sketch({ t: 'rect', a: [w / 2, h / 2] }, sym2(w / 2, h / 2)); }
+function circle(d) { pos(d, 'circle Ø'); return new Sketch({ t: 'circ', a: [d / 2] }, sym2(d / 2, d / 2)); }
+function arc(d, w, deg = 180) {
+  pos(d, 'arc Ø'); pos(w, 'arc width'); pos(deg, 'arc angle');
+  if (deg > 360) throw new Error('arc angle is at most 360°');
+  const e = d / 2 + w / 2;
+  return new Sketch({ t: 'arc', a: [Math.sin(deg / 2 * DEG), Math.cos(deg / 2 * DEG), d / 2, w / 2] }, sym2(e, e));
+}
+function polyFrom(pts, what) {
+  const flat = pts.flat(Infinity);
+  if (flat.length < 6 || flat.length % 2) throw new Error(`${what} needs at least three [x, y] points`);
+  flat.forEach((v, i) => num(v, `${what} point ${Math.floor(i / 2) + 1}`));
+  if (flat.length > 400) throw new Error(`${what} has too many points (the limit is 200)`);
+  const b = [INF, INF, -INF, -INF];
+  for (let i = 0; i < flat.length; i += 2) { b[0] = Math.min(b[0], flat[i]); b[1] = Math.min(b[1], flat[i + 1]); b[2] = Math.max(b[2], flat[i]); b[3] = Math.max(b[3], flat[i + 1]); }
+  return new Sketch({ t: 'poly', pts: flat }, b);
+}
+function polygon(...pts) { if (pts.length === 1 && Array.isArray(pts[0])) pts = pts[0]; return polyFrom(pts, 'polygon()'); }
+function ngon(n, d) {
+  n = Math.round(num(n, 'ngon sides')); if (n < 3 || n > 64) throw new Error('ngon needs 3 to 64 sides'); pos(d, 'ngon Ø');
+  const pts = []; for (let i = 0; i < n; i++) pts.push([d / 2 * Math.cos(i * 2 * Math.PI / n), d / 2 * Math.sin(i * 2 * Math.PI / n)]);
+  return polyFrom(pts, 'ngon()');
+}
+// A single-stroke font on a 4 × 6 grid: each glyph is polylines "x,y x,y | x,y ...".
+const FONT = {
+  A: '0,0 0,4 2,6 4,4 4,0|0,3 4,3', B: '0,0 0,6 3,6 4,5 4,4 3,3 0,3|3,3 4,2 4,1 3,0 0,0', C: '4,6 1,6 0,5 0,1 1,0 4,0',
+  D: '0,0 0,6 2,6 4,4 4,2 2,0 0,0', E: '4,6 0,6 0,0 4,0|0,3 3,3', F: '4,6 0,6 0,0|0,3 3,3', G: '4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,3 2,3',
+  H: '0,0 0,6|4,0 4,6|0,3 4,3', I: '1,6 3,6|2,6 2,0|1,0 3,0', J: '4,6 4,1 3,0 1,0 0,1', K: '0,0 0,6|4,6 0,2|1,3 4,0', L: '0,6 0,0 4,0',
+  M: '0,0 0,6 2,3 4,6 4,0', N: '0,0 0,6 4,0 4,6', O: '1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0', P: '0,0 0,6 3,6 4,5 4,4 3,3 0,3',
+  Q: '1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0|2,2 4,0', R: '0,0 0,6 3,6 4,5 4,4 3,3 0,3|2,3 4,0',
+  S: '4,5 3,6 1,6 0,5 0,4 1,3 3,3 4,2 4,1 3,0 1,0 0,1', T: '0,6 4,6|2,6 2,0', U: '0,6 0,1 1,0 3,0 4,1 4,6', V: '0,6 2,0 4,6',
+  W: '0,6 1,0 2,3 3,0 4,6', X: '0,0 4,6|0,6 4,0', Y: '0,6 2,3 4,6|2,3 2,0', Z: '0,6 4,6 0,0 4,0',
+  0: '1,0 0,1 0,5 1,6 3,6 4,5 4,1 3,0 1,0|0,1 4,5', 1: '1,5 2,6 2,0|1,0 3,0', 2: '0,5 1,6 3,6 4,5 4,4 0,0 4,0',
+  3: '0,5 1,6 3,6 4,5 4,4 3,3 4,2 4,1 3,0 1,0 0,1|1,3 3,3', 4: '3,0 3,6 0,2 4,2', 5: '4,6 0,6 0,3 3,3 4,2 4,1 3,0 0,0',
+  6: '4,5 3,6 1,6 0,5 0,1 1,0 3,0 4,1 4,2 3,3 0,3', 7: '0,6 4,6 1,0', 8: '1,3 0,4 0,5 1,6 3,6 4,5 4,4 3,3 1,3 0,2 0,1 1,0 3,0 4,1 4,2 3,3',
+  9: '0,1 1,0 3,0 4,1 4,5 3,6 1,6 0,5 0,4 1,3 4,3', '-': '1,3 3,3', '.': '2,0 2,0', '/': '0,0 4,6', '+': '0,3 4,3|2,1 2,5',
+  ':': '2,1 2,1|2,4 2,4', '°': '1,5 2,6 3,5 2,4 1,5', ' ': '',
+};
+function text(str, h, stroke) {
+  if (typeof str !== 'string') throw new Error("text() needs a string first, e.g. text('OPUS', 10)");
+  pos(h, 'text height'); stroke = stroke ?? h * 0.14; pos(stroke, 'text stroke');
+  const chars = [...str.toUpperCase()];
+  const bad = chars.find(c => FONT[c] === undefined);
+  if (bad) throw new Error(`text() has no glyph for "${bad}". It knows A–Z, 0–9 and - . / + : ° and spaces`);
+  if (!chars.length) throw new Error('text() needs at least one character');
+  const u = h / 6, width = (chars.length * 6 - 2) * u, segs = [];
+  chars.forEach((c, i) => {
+    for (const line of FONT[c].split('|').filter(Boolean)) {
+      const pts = line.trim().split(/\s+/).map(q => q.split(',').map(Number));
+      const at = ([x, y]) => [(i * 6 + x) * u - width / 2, y * u - h / 2];
+      if (pts.length === 1) segs.push(...at(pts[0]), ...at(pts[0]));
+      for (let k = 0; k + 1 < pts.length; k++) segs.push(...at(pts[k]), ...at(pts[k + 1]));
+    }
+  });
+  if (segs.length > 800) throw new Error('text() is too long (about 40 characters at most)');
+  const r = stroke / 2;
+  return new Sketch({ t: 'segs', pts: segs, r }, sym2(width / 2 + r, h / 2 + r));
+}
+
+let paramVals = Object.create(null), paramSeen = [];
+function param(name, v, min, max, step) {
+  if (typeof name !== 'string' || !name) throw new Error("param() needs a name first, e.g. param('width', 20, 5, 50)");
+  num(v, `param('${name}')`);
+  min = min ?? Math.min(0, v); max = max ?? (v === 0 ? 10 : Math.abs(v) * 2);
+  num(min, `param('${name}') min`); num(max, `param('${name}') max`);
+  if (max <= min) throw new Error(`param('${name}') max must be above min`);
+  step = step ?? niceStep((max - min) / 100);
+  if (paramSeen.some(p => p.name === name)) throw new Error(`param('${name}') is declared twice`);
+  paramSeen.push({ name, v, min, max, step });
+  let cur = paramVals[name];
+  if (cur === undefined || cur < min || cur > max) cur = paramVals[name] = v;
+  return cur;
+}
+Object.assign(window, { box, cyl, sphere, cone, torus, hex, gyroid, union, param, rect, circle, arc, polygon, ngon, text,
+  PI: Math.PI, sin: Math.sin, cos: Math.cos, tan: Math.tan, sqrt: Math.sqrt, hypot: Math.hypot });
+
+function evaluate(code) {
+  paramSeen = [];
+  let v;
+  try { v = (0, eval)('"use strict";' + code); }
+  catch (e) {
+    const m = /<anonymous>:(\d+):(\d+)/.exec(e.stack || '');
+    return { error: (e.message || String(e)), line: m ? +m[1] : null };
+  }
+  if (v instanceof Sketch) return { error: 'The last line is a 2D sketch. Give it thickness: add .extrude(5) or .revolve() to the end.' };
+  if (!(v instanceof Shape)) return { error: 'The last line should be the part, for example box(20). It is what gets cast.' };
+  if (unbounded(v.b)) return { error: 'This part goes on forever. Intersect gyroid() with a solid: sphere(40).and(gyroid(10, 1))' };
+  if (v.b[3] <= v.b[0] || v.b[4] <= v.b[1] || v.b[5] <= v.b[2]) return { error: 'This intersection is empty: the shapes do not overlap.' };
+  return { shape: v };
+}
+function countNodes(n) { return 1 + (Array.isArray(n.c) ? n.c.reduce((s, c) => s + countNodes(c), 0) : n.c ? countNodes(n.c) : 0); }
+
+/* =====================================================================
+   Backend 1: JavaScript closures. Used for analysis, picking, grading
+   and meshing. Each node becomes a function (x, y, z) -> distance.
+   ===================================================================== */
+const smin = (a, b, k) => { if (k <= 0) return a < b ? a : b; const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
+const smax = (a, b, k) => -smin(-a, -b, k);
+function sdCone(x, y, z, r1, r2, h) {
+  const qx = Math.sqrt(x * x + y * y), qy = z;
+  const k2x = r2 - r1, k2y = 2 * h;
+  const cax = qx - Math.min(qx, qy < 0 ? r1 : r2), cay = Math.abs(qy) - h;
+  const t = clamp(((r2 - qx) * k2x + (h - qy) * k2y) / (k2x * k2x + k2y * k2y), 0, 1);
+  const cbx = qx - r2 + k2x * t, cby = qy - h + k2y * t;
+  const s = (cbx < 0 && cay < 0) ? -1 : 1;
+  return s * Math.sqrt(Math.min(cax * cax + cay * cay, cbx * cbx + cby * cby));
+}
+function sdHex(x, y, z, a, h) {
+  const kx = -0.8660254, ky = 0.5, kz = 0.57735;
+  x = Math.abs(x); y = Math.abs(y); z = Math.abs(z);
+  const f = 2 * Math.min(kx * x + ky * y, 0);
+  x -= f * kx; y -= f * ky;
+  const cx = clamp(x, -kz * a, kz * a);
+  const dx = Math.hypot(x - cx, y - a) * Math.sign(y - a), dy = z - h;
+  return Math.min(Math.max(dx, dy), 0) + Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
+}
+function sdPolyJS(x, y, v) {
+  const n = v.length / 2;
+  let d = (x - v[0]) ** 2 + (y - v[1]) ** 2, s = 1;
+  for (let i = 0, j = n - 1; i < n; j = i, i++) {
+    const vix = v[2 * i], viy = v[2 * i + 1], ex = v[2 * j] - vix, ey = v[2 * j + 1] - viy, wx = x - vix, wy = y - viy;
+    const t = clamp((wx * ex + wy * ey) / (ex * ex + ey * ey), 0, 1), qx = wx - ex * t, qy = wy - ey * t;
+    d = Math.min(d, qx * qx + qy * qy);
+    const c1 = y >= viy, c2 = y < v[2 * j + 1], c3 = ex * wy > ey * wx;
+    if ((c1 && c2 && c3) || (!c1 && !c2 && !c3)) s = -s;
+  }
+  return s * Math.sqrt(d);
+}
+function jsf2(n) {
+  switch (n.t) {
+    case 'rect': { const [a, b] = n.a; return (x, y) => { const qx = Math.abs(x) - a, qy = Math.abs(y) - b, ox = qx > 0 ? qx : 0, oy = qy > 0 ? qy : 0, m = qx > qy ? qx : qy; return Math.sqrt(ox * ox + oy * oy) + (m < 0 ? m : 0); }; }
+    case 'circ': { const r = n.a[0]; return (x, y) => Math.sqrt(x * x + y * y) - r; }
+    case 'arc': { const [sx, cy, ra, rb] = n.a; return (x0, y0) => {   // centred on +X: swap axes into the +Y form
+      const x = Math.abs(y0), y = x0;
+      return (cy * x > sx * y ? Math.hypot(x - sx * ra, y - cy * ra) : Math.abs(Math.hypot(x, y) - ra)) - rb; }; }
+    case 'poly': { const v = n.pts; return (x, y) => sdPolyJS(x, y, v); }
+    case 'segs': { const v = n.pts, r = n.r, N = v.length / 4; return (x, y) => {
+      let d = Infinity;
+      for (let i = 0; i < N; i++) {
+        const ax = v[4 * i], ay = v[4 * i + 1], bx = v[4 * i + 2] - ax, by = v[4 * i + 3] - ay, px = x - ax, py = y - ay;
+        const t = clamp((px * bx + py * by) / Math.max(bx * bx + by * by, 1e-9), 0, 1), dx = px - bx * t, dy = py - by * t;
+        d = Math.min(d, dx * dx + dy * dy);
+      }
+      return Math.sqrt(d) - r; }; }
+    case 'u': { const fs = n.c.map(jsf2), k = n.k; return (x, y) => { let d = fs[0](x, y); for (let i = 1; i < fs.length; i++) d = smin(d, fs[i](x, y), k); return d; }; }
+    case 'i': { const fs = n.c.map(jsf2), k = n.k; return (x, y) => { let d = fs[0](x, y); for (let i = 1; i < fs.length; i++) d = smax(d, fs[i](x, y), k); return d; }; }
+    case 's': { const a = jsf2(n.c[0]), b = jsf2(n.c[1]), k = n.k; return (x, y) => smax(a(x, y), -b(x, y), k); }
+    case 'mv2': { const f = jsf2(n.c), [tx, ty] = n.a; return (x, y) => f(x - tx, y - ty); }
+    case 'rot2': { const f = jsf2(n.c), [c, s] = n.a; return (x, y) => f(c * x + s * y, -s * x + c * y); }
+    case 'mir2': { const f = jsf2(n.c), [mx, my] = n.a; return (x, y) => f(mx ? Math.abs(x) : x, my ? Math.abs(y) : y); }
+    case 'pol2': { const f = jsf2(n.c), an = 2 * Math.PI / n.a[0]; return (x, y) => {
+      let a = Math.atan2(y, x) + an / 2; a -= an * Math.floor(a / an); a -= an / 2;
+      const r = Math.sqrt(x * x + y * y); return f(r * Math.cos(a), r * Math.sin(a)); }; }
+    case 'arr2': { const f = jsf2(n.c), [N, vx, vy] = n.a, L2 = vx * vx + vy * vy; return (x, y) => {
+      const t = clamp(Math.floor((x * vx + y * vy) / L2 + 0.5), 0, N - 1); return f(x - t * vx, y - t * vy); }; }
+    case 'off2': { const f = jsf2(n.c), r = n.a[0]; return (x, y) => f(x, y) - r; }
+    case 'shl2': { const f = jsf2(n.c), t = n.a[0]; return (x, y) => Math.abs(f(x, y)) - t; }
+    case 'scl2': { const f = jsf2(n.c), k = n.a[0]; return (x, y) => f(x / k, y / k) * k; }
+  }
+  throw new Error('unknown sketch node ' + n.t);
+}
+function jsf(n) {
+  switch (n.t) {
+    case 'box': { const [a, b, c] = n.a; return (x, y, z) => {
+      const qx = Math.abs(x) - a, qy = Math.abs(y) - b, qz = Math.abs(z) - c;
+      const ox = qx > 0 ? qx : 0, oy = qy > 0 ? qy : 0, oz = qz > 0 ? qz : 0;
+      const m = qx > qy ? (qx > qz ? qx : qz) : (qy > qz ? qy : qz);
+      return Math.sqrt(ox * ox + oy * oy + oz * oz) + (m < 0 ? m : 0); }; }
+    case 'sph': { const r = n.a[0]; return (x, y, z) => Math.sqrt(x * x + y * y + z * z) - r; }
+    case 'cyl': { const [r, h] = n.a; return (x, y, z) => {
+      const dx = Math.sqrt(x * x + y * y) - r, dy = Math.abs(z) - h;
+      const ox = dx > 0 ? dx : 0, oy = dy > 0 ? dy : 0, m = dx > dy ? dx : dy;
+      return (m < 0 ? m : 0) + Math.sqrt(ox * ox + oy * oy); }; }
+    case 'tor': { const [R, r] = n.a; return (x, y, z) => { const q = Math.sqrt(x * x + y * y) - R; return Math.sqrt(q * q + z * z) - r; }; }
+    case 'cone': { const [r1, r2, h] = n.a; return (x, y, z) => sdCone(x, y, z, r1, r2, h); }
+    case 'hex': { const [a, h] = n.a; return (x, y, z) => sdHex(x, y, z, a, h); }
+    case 'gyr': { const [g, t] = n.a; return (x, y, z) =>
+      Math.abs(Math.sin(x * g) * Math.cos(y * g) + Math.sin(y * g) * Math.cos(z * g) + Math.sin(z * g) * Math.cos(x * g)) / (g * 1.5) - t; }
+    case 'u': { const fs = n.c.map(jsf), k = n.k; return (x, y, z) => { let d = fs[0](x, y, z); for (let i = 1; i < fs.length; i++) d = smin(d, fs[i](x, y, z), k); return d; }; }
+    case 'i': { const fs = n.c.map(jsf), k = n.k; return (x, y, z) => { let d = fs[0](x, y, z); for (let i = 1; i < fs.length; i++) d = smax(d, fs[i](x, y, z), k); return d; }; }
+    case 's': { const a = jsf(n.c[0]), b = jsf(n.c[1]), k = n.k; return (x, y, z) => smax(a(x, y, z), -b(x, y, z), k); }
+    case 'mv': { const f = jsf(n.c), [tx, ty, tz] = n.a; return (x, y, z) => f(x - tx, y - ty, z - tz); }
+    case 'rot': { const f = jsf(n.c), m = n.m; return (x, y, z) => f(m[0] * x + m[1] * y + m[2] * z, m[3] * x + m[4] * y + m[5] * z, m[6] * x + m[7] * y + m[8] * z); }
+    case 'rnd': { const f = jsf(n.c), r = n.a[0]; return (x, y, z) => f(x, y, z) - r; }
+    case 'shl': { const f = jsf(n.c), t = n.a[0]; return (x, y, z) => Math.abs(f(x, y, z)) - t; }
+    case 'mir': { const f = jsf(n.c), [mx, my, mz] = n.a; return (x, y, z) => f(mx ? Math.abs(x) : x, my ? Math.abs(y) : y, mz ? Math.abs(z) : z); }
+    case 'pol': { const f = jsf(n.c), an = 2 * Math.PI / n.a[0]; return (x, y, z) => {
+      let a = Math.atan2(y, x) + an / 2; a -= an * Math.floor(a / an); a -= an / 2;
+      const r = Math.sqrt(x * x + y * y); return f(r * Math.cos(a), r * Math.sin(a), z); }; }
+    case 'arr': { const f = jsf(n.c), [N, vx, vy, vz] = n.a, L2 = vx * vx + vy * vy + vz * vz; return (x, y, z) => {
+      const t = clamp(Math.floor((x * vx + y * vy + z * vz) / L2 + 0.5), 0, N - 1); return f(x - t * vx, y - t * vy, z - t * vz); }; }
+    case 'twi': { const f = jsf(n.c), [k, inv] = n.a; return (x, y, z) => { const c = Math.cos(k * z), s = Math.sin(k * z); return f(c * x + s * y, -s * x + c * y, z) * inv; }; }
+    case 'scl': { const f = jsf(n.c), s = n.a[0]; return (x, y, z) => f(x / s, y / s, z / s) * s; }
+    case 'elo': { const f = jsf(n.c), [hx, hy, hz] = n.a; return (x, y, z) => f(x - clamp(x, -hx, hx), y - clamp(y, -hy, hy), z - clamp(z, -hz, hz)); }
+    case 'ext': { const f = jsf2(n.c), [hh, r] = n.a; return (x, y, z) => {
+      const wx = f(x, y) + r, wy = Math.abs(z) - hh + r, ox = wx > 0 ? wx : 0, oy = wy > 0 ? wy : 0, m = wx > wy ? wx : wy;
+      return (m < 0 ? m : 0) + Math.sqrt(ox * ox + oy * oy) - r; }; }
+    case 'rev': { const f = jsf2(n.c), o = n.a[0]; return (x, y, z) => f(Math.sqrt(x * x + y * y) - o, z); }
+  }
+  throw new Error('unknown node ' + n.t);
+}
+
+/* =====================================================================
+   Backend 2: GLSL. Every number in the part becomes a slot in a uniform
+   array, so the shader source depends only on the tree's shape. Drag a
+   slider and only the uniforms change: no recompile.
+   ===================================================================== */
+const canvas = $('#gl');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: true });
+const NU = gl ? clamp(gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) - 48, 64, 256) : 64;
+const glslNum = v => { const s = String(+v.toPrecision(9)); return '(' + (/[.e]/.test(s) ? s : s + '.0') + ')'; };
+
+function emitGLSL(root) {
+  let inline = false;
+  for (;;) {
+    const U = [], lines = []; let id = 0;
+    const L = v => { if (inline) return glslNum(v); const i = U.length; U.push(v); return `U[${i >> 2}].${'xyzw'[i & 3]}`; };
+    const V3 = (a, b, c) => `vec3(${L(a)},${L(b)},${L(c)})`;
+    const P = ex => { const v = 'p' + (id++); lines.push(`vec3 ${v}=${ex};`); return v; };
+    const D = ex => { const v = 'd' + (id++); lines.push(`float ${v}=${ex};`); return v; };
+    const Q = ex => { const v = 'q' + (id++); lines.push(`vec2 ${v}=${ex};`); return v; };
+    // point lists (polygons, text) always live in the uniform array and are read in a loop
+    const data = arr => { const i = U.length; U.push(...arr); return i; };
+    const e = (n, p) => {
+      switch (n.t) {
+        case 'box': return D(`sdBox(${p},${V3(...n.a)})`);
+        case 'sph': return D(`length(${p})-${L(n.a[0])}`);
+        case 'cyl': return D(`sdCyl(${p},${L(n.a[0])},${L(n.a[1])})`);
+        case 'tor': return D(`sdTorus(${p},${L(n.a[0])},${L(n.a[1])})`);
+        case 'cone': return D(`sdCone(${p},${L(n.a[0])},${L(n.a[1])},${L(n.a[2])})`);
+        case 'hex': return D(`sdHex(${p},${L(n.a[0])},${L(n.a[1])})`);
+        case 'gyr': return D(`sdGyroid(${p},${L(n.a[0])},${L(n.a[1])})`);
+        case 'u': case 'i': { const k = L(n.k), f = n.t === 'u' ? 'smin' : 'smax'; let d = e(n.c[0], p);
+          for (let i = 1; i < n.c.length; i++) { const b = e(n.c[i], p); d = D(`${f}(${d},${b},${k})`); } return d; }
+        case 's': { const k = L(n.k), a = e(n.c[0], p), b = e(n.c[1], p); return D(`smax(${a},-${b},${k})`); }
+        case 'mv': return e(n.c, P(`${p}-${V3(...n.a)}`));
+        case 'rot': { const m = n.m.map(L); return e(n.c, P(`vec3(${m[0]}*${p}.x+${m[1]}*${p}.y+${m[2]}*${p}.z,${m[3]}*${p}.x+${m[4]}*${p}.y+${m[5]}*${p}.z,${m[6]}*${p}.x+${m[7]}*${p}.y+${m[8]}*${p}.z)`)); }
+        case 'rnd': { const d = e(n.c, p); return D(`${d}-${L(n.a[0])}`); }
+        case 'shl': { const d = e(n.c, p); return D(`abs(${d})-${L(n.a[0])}`); }
+        case 'mir': return e(n.c, P(`mix(${p},abs(${p}),${V3(...n.a)})`));
+        case 'pol': return e(n.c, P(`opPolar(${p},${L(n.a[0])})`));
+        case 'arr': return e(n.c, P(`opArr(${p},${V3(n.a[1], n.a[2], n.a[3])},${L(n.a[0])})`));
+        case 'twi': { const q = P(`opTwist(${p},${L(n.a[0])})`); const d = e(n.c, q); return D(`${d}*${L(n.a[1])}`); }
+        case 'scl': { const s = L(n.a[0]); const d = e(n.c, P(`${p}/${s}`)); return D(`${d}*${s}`); }
+        case 'elo': { const h = V3(...n.a); return e(n.c, P(`${p}-clamp(${p},-${h},${h})`)); }
+        case 'ext': { const d = e2(n.c, Q(`${p}.xy`)); return D(`opExtrude(${d},${p}.z,${L(n.a[0])},${L(n.a[1])})`); }
+        case 'rev': return e2(n.c, Q(`vec2(length(${p}.xy)-${L(n.a[0])},${p}.z)`));
+      }
+      throw new Error('unknown node ' + n.t);
+    };
+    const e2 = (n, q) => {
+      switch (n.t) {
+        case 'rect': return D(`sdBox2(${q},vec2(${L(n.a[0])},${L(n.a[1])}))`);
+        case 'circ': return D(`length(${q})-${L(n.a[0])}`);
+        case 'arc': return D(`sdArc(${q},vec2(${L(n.a[0])},${L(n.a[1])}),${L(n.a[2])},${L(n.a[3])})`);
+        case 'poly': return D(`sdPoly(${q},${data(n.pts)},${n.pts.length / 2})`);
+        case 'segs': return D(`sdSegs(${q},${data(n.pts)},${n.pts.length / 4},${L(n.r)})`);
+        case 'u': case 'i': { const k = L(n.k), f = n.t === 'u' ? 'smin' : 'smax'; let d = e2(n.c[0], q);
+          for (let i = 1; i < n.c.length; i++) { const b = e2(n.c[i], q); d = D(`${f}(${d},${b},${k})`); } return d; }
+        case 's': { const k = L(n.k), a = e2(n.c[0], q), b = e2(n.c[1], q); return D(`smax(${a},-${b},${k})`); }
+        case 'mv2': return e2(n.c, Q(`${q}-vec2(${L(n.a[0])},${L(n.a[1])})`));
+        case 'rot2': { const c = L(n.a[0]), s = L(n.a[1]); return e2(n.c, Q(`vec2(${c}*${q}.x+${s}*${q}.y,-${s}*${q}.x+${c}*${q}.y)`)); }
+        case 'mir2': return e2(n.c, Q(`mix(${q},abs(${q}),vec2(${L(n.a[0])},${L(n.a[1])}))`));
+        case 'pol2': return e2(n.c, Q(`opPolar(vec3(${q},0.),${L(n.a[0])}).xy`));
+        case 'arr2': return e2(n.c, Q(`opArr(vec3(${q},0.),vec3(${L(n.a[1])},${L(n.a[2])},0.),${L(n.a[0])}).xy`));
+        case 'off2': { const d = e2(n.c, q); return D(`${d}-${L(n.a[0])}`); }
+        case 'shl2': { const d = e2(n.c, q); return D(`abs(${d})-${L(n.a[0])}`); }
+        case 'scl2': { const k = L(n.a[0]); const d = e2(n.c, Q(`${q}/${k}`)); return D(`${d}*${k}`); }
+      }
+      throw new Error('unknown sketch node ' + n.t);
+    };
+    const r = e(root, 'p');
+    if (!inline && U.length > NU * 4) { inline = true; continue; }   // too many numbers: bake them in instead
+    if (U.length > NU * 4) throw new Error(`This part has too many sketch points for the GPU (${U.length} numbers, limit ${NU * 4}). Use fewer points or shorter text.`);
+    return { body: lines.join('\n') + `\nreturn ${r};`, U, inline };
+  }
+}
+
+const LIB = `
+float sdBox(vec3 p, vec3 b){ vec3 q=abs(p)-b; return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.); }
+float sdCyl(vec3 p, float r, float h){ vec2 d=vec2(length(p.xy)-r, abs(p.z)-h); return min(max(d.x,d.y),0.)+length(max(d,0.)); }
+float sdTorus(vec3 p, float R, float r){ vec2 q=vec2(length(p.xy)-R, p.z); return length(q)-r; }
+float dot2(vec2 v){ return dot(v,v); }
+float sdCone(vec3 p, float r1, float r2, float h){
+  vec2 q=vec2(length(p.xy), p.z); vec2 k1=vec2(r2,h); vec2 k2=vec2(r2-r1,2.*h);
+  vec2 ca=vec2(q.x-min(q.x,(q.y<0.)?r1:r2), abs(q.y)-h);
+  vec2 cb=q-k1+k2*clamp(dot(k1-q,k2)/dot2(k2),0.,1.);
+  float s=(cb.x<0.&&ca.y<0.)?-1.:1.; return s*sqrt(min(dot2(ca),dot2(cb))); }
+float sdHex(vec3 p, float a, float h){
+  const vec3 k=vec3(-0.8660254,0.5,0.57735); p=abs(p); p.xy-=2.*min(dot(k.xy,p.xy),0.)*k.xy;
+  vec2 d=vec2(length(p.xy-vec2(clamp(p.x,-k.z*a,k.z*a),a))*sign(p.y-a), p.z-h);
+  return min(max(d.x,d.y),0.)+length(max(d,0.)); }
+float sdGyroid(vec3 p, float g, float t){ return abs(dot(sin(p*g), cos(p.yzx*g)))/(g*1.5)-t; }
+float smin(float a, float b, float k){ if(k<=0.) return min(a,b); float h=max(k-abs(a-b),0.)/k; return min(a,b)-h*h*k*.25; }
+float smax(float a, float b, float k){ return -smin(-a,-b,k); }
+vec3 opPolar(vec3 p, float n){ float an=6.2831853/n; float a=atan(p.y,p.x)+an*.5; a=mod(a,an)-an*.5; float r=length(p.xy); return vec3(r*cos(a), r*sin(a), p.z); }
+vec3 opArr(vec3 p, vec3 v, float n){ float t=clamp(floor(dot(p,v)/dot(v,v)+.5),0.,n-1.); return p-t*v; }
+float sdBox2(vec2 p, vec2 b){ vec2 q=abs(p)-b; return length(max(q,0.))+min(max(q.x,q.y),0.); }
+float sdArc(vec2 p0, vec2 sc, float ra, float rb){ vec2 p=vec2(abs(p0.y),p0.x); return ((sc.y*p.x>sc.x*p.y) ? length(p-sc*ra) : abs(length(p)-ra))-rb; }
+float fu(int i){ return U[i>>2][i&3]; }
+vec2 fu2(int i){ return vec2(fu(i),fu(i+1)); }
+float sdPoly(vec2 p, int b, int n){
+  vec2 v0=fu2(b); float d=dot(p-v0,p-v0), s=1.;
+  for(int i=0, j=n-1; i<n; j=i, i++){
+    vec2 vi=fu2(b+2*i), vj=fu2(b+2*j), e=vj-vi, w=p-vi;
+    vec2 q=w-e*clamp(dot(w,e)/dot(e,e),0.,1.); d=min(d,dot(q,q));
+    bvec3 c=bvec3(p.y>=vi.y, p.y<vj.y, e.x*w.y>e.y*w.x);
+    if(all(c)||all(not(c))) s=-s;
+  }
+  return s*sqrt(d);
+}
+float sdSegs(vec2 p, int b, int n, float r){
+  float d=1e9;
+  for(int i=0;i<n;i++){ vec2 a=fu2(b+4*i), c=fu2(b+4*i+2); vec2 pa=p-a, ba=c-a; float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-9),0.,1.); vec2 k=pa-ba*h; d=min(d,dot(k,k)); }
+  return sqrt(d)-r;
+}
+float opExtrude(float d, float z, float h, float r){ vec2 w=vec2(d+r, abs(z)-h+r); return min(max(w.x,w.y),0.)+length(max(w,0.))-r; }
+vec3 opTwist(vec3 p, float k){ float c=cos(k*p.z), s=sin(k*p.z); return vec3(c*p.x+s*p.y, -s*p.x+c*p.y, p.z); }
+`;
+
+const MAIN = `
+float march(vec3 ro, vec3 rd, float t, float tmax){
+  for(int i=0;i<256;i++){
+    float d=scene(ro+rd*t);
+    if(d<max(0.002,0.00022*t)) return t;
+    t+=d*0.85;
+    if(t>tmax) break;
+  }
+  return -1.;
+}
+vec3 calcNormal(vec3 p, float t){
+  float h=max(0.002,0.0003*t); const vec2 k=vec2(1.,-1.);
+  return normalize(k.xyy*scene(p+k.xyy*h)+k.yyx*scene(p+k.yyx*h)+k.yxy*scene(p+k.yxy*h)+k.xxx*scene(p+k.xxx*h));
+}
+float softShadow(vec3 ro, vec3 rd){
+  vec3 oc=ro-uBound.xyz; float b=dot(oc,rd); float c=dot(oc,oc)-uBound.w*uBound.w; float h=b*b-c;
+  if(h<0.) return 1.;
+  h=sqrt(h); float t=max(-b-h,0.01*uBound.w), t1=-b+h;
+  float res=1.;
+  for(int i=0;i<64;i++){
+    float d=scene(ro+rd*t);
+    res=min(res,12.*d/t);
+    t+=clamp(d,0.004*uBound.w,0.15*uBound.w);
+    if(res<0.002||t>t1) break;
+  }
+  return clamp(res,0.,1.);
+}
+float calcAO(vec3 p, vec3 n){
+  float o=0., w=1., s=0.12*uBound.w;
+  for(int i=1;i<=5;i++){ float h=s*float(i)/5.; o+=w*(h-scene(p+n*h)); w*=.6; }
+  return clamp(1.-o*1.6/s,0.,1.);
+}
+vec3 env(vec3 d){
+  // a photo studio: grey cyclorama, a bright horizon band, an overhead softbox, a key strip and a cool rim
+  vec3 c=mix(vec3(.10,.105,.115), vec3(.42,.44,.47), smoothstep(-.35,.75,d.z));
+  c+=vec3(.55,.56,.58)*exp(-abs(d.z-.08)*9.);
+  c+=vec3(2.4,2.35,2.2)*smoothstep(.84,.97,d.z);
+  c+=vec3(1.6,1.6,1.65)*smoothstep(.88,.985,dot(d,normalize(vec3(-.75,-.55,.35))));
+  c+=vec3(.6,.85,1.2)*smoothstep(.92,.99,dot(d,normalize(vec3(.8,.6,.15))));
+  c*=1.-.55*smoothstep(-.05,-.6,d.z);
+  return c;
+}
+vec3 ramp(float x){
+  x=clamp(x,0.,1.);
+  vec3 a=mix(vec3(.04,.10,.28), vec3(.08,.50,.72), smoothstep(0.,.4,x));
+  return mix(a, vec3(1.,.83,.42), smoothstep(.4,1.,x));
+}
+float gridLine(vec2 g, float s, float px){ vec2 q=abs(fract(g/s+.5)-.5)*s; return 1.-smoothstep(.5*px,1.5*px,min(q.x,q.y)); }
+float hash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+
+void main(){
+  vec2 uv=(gl_FragCoord.xy+uJitter-.5*uRes)/(.5*uRes.y);
+  vec3 ro, rd;
+  if(uOrtho==1){ ro=uPos+(uRight*uv.x+uUp*uv.y)*uOrthoH; rd=uFwd; }
+  else { ro=uPos; rd=normalize(uFwd*uFocal+uRight*uv.x+uUp*uv.y); }
+  float tg=1e9;
+  if(uMode==0 && rd.z<0. && ro.z>uGround) tg=(uGround-ro.z)/rd.z;
+  float t=-1.;
+  vec3 oc=ro-uBound.xyz; float b=dot(oc,rd); float c=dot(oc,oc)-uBound.w*uBound.w; float h=b*b-c;
+  if(h>0.){ h=sqrt(h); float t0=max(-b-h,0.), t1=-b+h; if(t1>0.) t=march(ro,rd,t0,min(t1,tg)); }
+
+  if(uMode==1){
+    if(t<0.){ outColor=vec4(0.); return; }
+    vec3 p=ro+rd*t; vec3 n=calcNormal(p,t);
+    float dz=clamp((t-uDepth.x)/(uDepth.y-uDepth.x),0.,1.);
+    outColor=vec4(n*.5+.5, .02+.98*dz); return;
+  }
+
+  vec3 L=normalize(vec3(-.35,-.6,.72));
+  float pxK=(uOrtho==1 ? 2.*uOrthoH : 2./uFocal)/uRes.y;   // mm per pixel (times t when perspective)
+  vec3 bg=mix(vec3(.022,.025,.03), vec3(.07,.078,.09), smoothstep(-.9,.9,uv.y));
+  bg*=1.-.25*dot(uv*.5,uv*.5);
+  vec3 col=bg;
+
+  if(t>0.){
+    vec3 p=ro+rd*t; vec3 n=calcNormal(p,t);
+    float dPart=map(p);
+    bool cut = uClipOn==1 && dPart < dot(p,uClip.xyz)-uClip.w - 1e-4;
+    float sh=softShadow(p+n*.004*uBound.w, L);
+    float occ=calcAO(p,n);
+    if(cut){
+      float th=-dPart;
+      float px=pxK*(uOrtho==1 ? 1. : t);
+      vec3 cc=ramp(th/max(uThick,1e-3));
+      float iso=abs(fract(th/uIso+.5)-.5)*uIso;
+      cc=mix(cc, vec3(.92,.97,1.), (1.-smoothstep(.5*px,1.6*px,iso))*.6);
+      vec3 tu=normalize(cross(n, abs(n.z)<.9 ? vec3(0,0,1) : vec3(1,0,0)));
+      vec3 tv=cross(n,tu);
+      float hq=abs(fract(dot(p,tu+tv)/(uIso*.7))-.5);
+      cc*=.9+.1*smoothstep(.2,.26,hq);
+      col=cc*(.62+.38*max(dot(n,L),0.)*(.4+.6*sh));
+    } else {
+      vec3 base=uBase; float metal=uMat.x, rough=uMat.y;
+      vec3 R=reflect(rd,n);
+      float fres=pow(1.-clamp(dot(n,-rd),0.,1.),5.);
+      vec3 F0=mix(vec3(.04),base,metal);
+      vec3 F=F0+(1.-F0)*fres*(1.-rough*.7);
+      float dif=max(dot(n,L),0.)*sh;
+      vec3 diffuse=base*(1.-metal)*(dif*vec3(1.,.96,.9)*1.25+occ*env(n)*.42);
+      vec3 spec=F*mix(env(R),env(n)*.8,rough*rough)*occ*mix(1.,.55+.45*sh,rough);
+      float hl=pow(max(dot(n,normalize(L-rd)),0.),mix(6.,160.,1.-rough))*dif;
+      spec+=F*hl*mix(2.5,.6,rough);
+      col=diffuse+spec*mix(.9,1.,metal);
+    }
+  } else if(tg<1e8){
+    vec3 gp=ro+rd*tg;
+    float px=pxK*(uOrtho==1 ? 1. : tg)/max(-rd.z,.12);
+    vec3 gc=vec3(.05,.056,.066);
+    float fade=exp(-length(gp.xy-uBound.xy)/(uBound.w*3.5));
+    gc+=vec3(.05,.075,.10)*gridLine(gp.xy,uGrid,px)*smoothstep(.9,.25,px/uGrid)*fade;
+    gc+=vec3(.08,.12,.17)*gridLine(gp.xy,uGrid*5.,px)*fade;
+    gc+=vec3(.22,.07,.05)*(1.-smoothstep(.5*px,1.6*px,abs(gp.y)))*fade;
+    gc+=vec3(.06,.17,.08)*(1.-smoothstep(.5*px,1.6*px,abs(gp.x)))*fade;
+    float sh=softShadow(gp+vec3(0,0,.01*uBound.w), L);
+    float occ=clamp(scene(gp)/(.3*uBound.w),0.,1.);
+    gc*=mix(.28,1.,sh)*mix(.35,1.,sqrt(occ));
+    if(uProbe.w>.5){
+      float dd=length(gp.xy-uProbe.xy);
+      float ang=atan(gp.y-uProbe.y, gp.x-uProbe.x);
+      float ring=1.-smoothstep(.6*px,1.8*px,abs(dd-uProbe.z));
+      vec3 bl=vec3(.47,.75,.96);
+      gc+=bl*.05*step(dd,uProbe.z);
+      gc=mix(gc,bl,ring*(.35+.65*step(0.,sin(ang*36.))));
+      gc=mix(gc,bl,1.-smoothstep(1.6*px,3.*px,dd));
+    }
+    col=mix(bg,gc,smoothstep(0.,.08,fade+.02));
+  }
+  col=(col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);
+  col=pow(clamp(col,0.,1.),vec3(1./2.2));
+  col+=(hash(gl_FragCoord.xy)-.5)/255.;
+  outColor=vec4(col,1.);
+}`;
+
+const UNIFORMS = ['uRes', 'uPos', 'uFwd', 'uRight', 'uUp', 'uFocal', 'uOrthoH', 'uMode', 'uOrtho', 'uClipOn', 'uBound', 'uClip', 'uProbe', 'uGround', 'uIso', 'uThick', 'uGrid', 'uBase', 'uMat', 'uDepth', 'uJitter', 'U'];
+const fragSrc = body => `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform vec3 uPos, uFwd, uRight, uUp; uniform float uFocal, uOrthoH;
+uniform int uMode, uOrtho, uClipOn; uniform vec4 uBound, uClip, uProbe;
+uniform float uGround, uIso, uThick, uGrid; uniform vec3 uBase; uniform vec2 uMat, uDepth, uJitter;
+uniform vec4 U[${NU}];
+out vec4 outColor;
+${LIB}
+float map(vec3 p){
+${body}
+}
+float scene(vec3 p){ float d=map(p); return uClipOn==1 ? max(d, dot(p,uClip.xyz)-uClip.w) : d; }
+${MAIN}`;
+
+let vao, vs, parallel = null;
+const programs = new Map();
+if (gl) {
+  parallel = gl.getExtension('KHR_parallel_shader_compile');
+  vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, '#version 300 es\nin vec2 a;void main(){gl_Position=vec4(a,0.,1.);}');
+  gl.compileShader(vs);
+  vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+}
+function requestProgram(body) {
+  let e = programs.get(body);
+  if (e) { programs.delete(body); programs.set(body, e); return e; }   // keep most-recent last
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, fragSrc(body)); gl.compileShader(fs);
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.bindAttribLocation(prog, 0, 'a'); gl.linkProgram(prog);
+  e = { prog, fs, ready: false, error: null, loc: {}, ubuf: new Float32Array(NU * 4) };
+  programs.set(body, e);
+  if (programs.size > 40) {   // forget the oldest programs, but never one in use
+    for (const [k, v] of programs) { if (programs.size <= 32) break; if (v !== shown?.entry && v !== pending?.entry) { gl.deleteProgram(v.prog); gl.deleteShader(v.fs); programs.delete(k); } }
+  }
+  return e;
+}
+function finalize(e) {
+  if (e.ready) return !e.error;
+  if (!gl.getProgramParameter(e.prog, gl.LINK_STATUS)) e.error = gl.getShaderInfoLog(e.fs) || gl.getProgramInfoLog(e.prog) || 'shader failed';
+  else for (const u of UNIFORMS) e.loc[u] = gl.getUniformLocation(e.prog, u);
+  e.ready = true;
+  return !e.error;
+}
+function isReady(e) {
+  if (e.ready) return true;
+  if (parallel && !gl.getProgramParameter(e.prog, parallel.COMPLETION_STATUS_KHR)) return false;
+  finalize(e); return true;
+}
+function bindModel(e, U) {
+  gl.useProgram(e.prog);
+  e.ubuf.fill(0); e.ubuf.set(U.slice(0, NU * 4));
+  gl.uniform4fv(e.loc.U, e.ubuf);
+}
+function boundSphere(b) { const c = centreB(b), s = sizeB(b); return [c[0], c[1], c[2], Math.hypot(...s) / 2 + 0.5]; }
+
+/* =====================================================================
+   Materials, camera, state
+   ===================================================================== */
+const MATERIALS = [
+  { id: 'al', name: 'Aluminium', full: 'ALUMINIUM 6061-T6', rho: 2.70, base: [0.91, 0.92, 0.93], metal: 1, rough: 0.32, sw: '#cfd4d9' },
+  { id: 'brass', name: 'Brass', full: 'BRASS C360', rho: 8.50, base: [0.96, 0.74, 0.40], metal: 1, rough: 0.26, sw: '#d9b066' },
+  { id: 'steel', name: 'Steel', full: 'STEEL 1018', rho: 7.87, base: [0.55, 0.57, 0.60], metal: 1, rough: 0.2, sw: '#8b9096' },
+  { id: 'pla', name: 'PLA', full: 'PLA, 100% INFILL', rho: 1.24, base: [0.95, 0.30, 0.10], metal: 0, rough: 0.42, sw: '#f0572a' },
+  { id: 'resin', name: 'Resin', full: 'GREY RESIN', rho: 1.18, base: [0.60, 0.62, 0.65], metal: 0, rough: 0.72, sw: '#9aa0a8' },
+];
+const VIEWS = { iso: { yaw: -52 * DEG, pitch: 28 * DEG }, top: { yaw: -90 * DEG, pitch: 89.4 * DEG }, front: { yaw: -90 * DEG, pitch: 0 }, right: { yaw: 0, pitch: 0 } };
+const FOCAL = 2.2;
+const cam = { t: [0, 0, 0], yaw: VIEWS.iso.yaw, pitch: VIEWS.iso.pitch, dist: 120, ortho: false, anim: null };
+const state = {
+  mat: MATERIALS[0], sec: { axis: '', flip: false, pos: 0.5 },
+  measure: { on: false, a: null, b: null }, hover: null, probe: null,
+  partName: 'Knob', framed: false,
+};
+let cur = null;        // the model being edited: { shape, f, glsl, nodes, tight, volume, deepest }
+let shown = null;      // what the GPU is drawing: { entry, U, bound }
+let pending = null;    // compiled program on its way in
+let dirty = true, lastInteract = -1e9, lowRes = false;
+
+const v3 = {
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  mul: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+};
+function basis() {
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch), cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+  const dir = [cp * cy, cp * sy, sp];
+  const pos = v3.add(cam.t, v3.mul(dir, cam.dist));
+  const fwd = v3.mul(dir, -1);
+  const right = v3.norm(v3.cross(fwd, [0, 0, 1]));
+  const up = v3.cross(right, fwd);
+  return { pos, fwd, right, up, orthoH: cam.dist / FOCAL };
+}
+function sectionPlane() {
+  const s = state.sec;
+  if (!s.axis || !cur) return null;
+  const k = 'xyz'.indexOf(s.axis), b = cur.tight || cur.shape.b;
+  const w = b[k] + s.pos * (b[k + 3] - b[k]);
+  const n = [0, 0, 0];
+  let sign = s.axis === 'y' ? -1 : 1;     // remove the side that faces the default camera
+  if (s.flip) sign = -sign;
+  n[k] = sign;
+  return { n, w: w * sign };
+}
+
+/* =====================================================================
+   Main render
+   ===================================================================== */
+const ov = $('#ov'), octx = ov.getContext('2d');
+function viewSize() { const r = canvas.parentElement.getBoundingClientRect(); return [Math.max(1, r.width), Math.max(1, r.height)]; }
+// Once the view is still, extra frames are rendered with sub-pixel offsets and averaged in (progressive anti-aliasing).
+const JITTER = [[0, 0], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25], [-0.25, -0.25], [0, 0.4], [0.4, 0], [-0.4, 0], [0, -0.4]];
+let accum = 0;
+function render(scale, sample = 0) {
+  if (!gl || !shown) return;
+  const [cw, ch] = viewSize();
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.75) * scale;
+  const w = Math.round(cw * dpr), h = Math.round(ch * dpr);
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, w, h);
+  const e = shown.entry, B = basis(), l = e.loc;
+  bindModel(e, shown.U);
+  gl.uniform2f(l.uRes, w, h);
+  gl.uniform3fv(l.uPos, cam.ortho ? v3.sub(B.pos, v3.mul(B.fwd, cam.dist * 2)) : B.pos);
+  gl.uniform3fv(l.uFwd, B.fwd); gl.uniform3fv(l.uRight, B.right); gl.uniform3fv(l.uUp, B.up);
+  gl.uniform1f(l.uFocal, FOCAL); gl.uniform1f(l.uOrthoH, B.orthoH);
+  gl.uniform1i(l.uMode, 0); gl.uniform1i(l.uOrtho, cam.ortho ? 1 : 0);
+  gl.uniform4fv(l.uBound, shown.bound);
+  const tb = cur?.tight || shown.bound && [shown.bound[0] - shown.bound[3], shown.bound[1] - shown.bound[3], shown.bound[2] - shown.bound[3], 0, 0, 0];
+  gl.uniform1f(l.uGround, cur?.tight ? cur.tight[2] : tb[2]);
+  const ext = cur?.tight ? Math.max(...sizeB(cur.tight)) : shown.bound[3] * 2;
+  gl.uniform1f(l.uGrid, niceStep(ext / 12));
+  const sp = sectionPlane();
+  gl.uniform1i(l.uClipOn, sp ? 1 : 0);
+  gl.uniform4f(l.uClip, ...(sp ? sp.n : [0, 0, 1]), sp ? sp.w : 0);
+  gl.uniform1f(l.uIso, niceStep(ext / 16));
+  gl.uniform1f(l.uThick, cur?.deepest || ext * 0.2);
+  const pr = state.probe;
+  gl.uniform4f(l.uProbe, pr ? pr[0] : 0, pr ? pr[1] : 0, pr ? pr[2] : 0, pr ? 1 : 0);
+  gl.uniform3fv(l.uBase, state.mat.base); gl.uniform2f(l.uMat, state.mat.metal, state.mat.rough);
+  gl.uniform2f(l.uDepth, 0, 1);
+  gl.uniform2f(l.uJitter, ...JITTER[sample]);
+  if (sample) { gl.enable(gl.BLEND); gl.blendColor(0, 0, 0, 1 / (sample + 1)); gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA); }
+  gl.bindVertexArray(vao);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.disable(gl.BLEND);
+}
+
+/* ---------- JS ray casting, for hover, measure and double-click ---------- */
+function rayAt(px, py) {
+  const [w, h] = viewSize(), B = basis();
+  const ux = (px - w / 2) / (h / 2), uy = (h / 2 - py) / (h / 2);
+  if (cam.ortho) {
+    const o = v3.add(v3.sub(B.pos, v3.mul(B.fwd, cam.dist * 2)), v3.add(v3.mul(B.right, ux * B.orthoH), v3.mul(B.up, uy * B.orthoH)));
+    return { ro: o, rd: B.fwd };
+  }
+  return { ro: B.pos, rd: v3.norm(v3.add(v3.mul(B.fwd, FOCAL), v3.add(v3.mul(B.right, ux), v3.mul(B.up, uy)))) };
+}
+function project(p) {
+  const [w, h] = viewSize(), B = basis();
+  const v = v3.sub(p, B.pos);
+  let x, y;
+  if (cam.ortho) { x = v3.dot(v, B.right) / B.orthoH; y = v3.dot(v, B.up) / B.orthoH; }
+  else { const z = v3.dot(v, B.fwd); if (z <= 0.01) return null; x = v3.dot(v, B.right) / z * FOCAL; y = v3.dot(v, B.up) / z * FOCAL; }
+  return [w / 2 + x * h / 2, h / 2 - y * h / 2];
+}
+function sceneFn() {
+  const f = cur.f, sp = sectionPlane();
+  if (!sp) return f;
+  const [nx, ny, nz] = sp.n, w = sp.w;
+  return (x, y, z) => Math.max(f(x, y, z), nx * x + ny * y + nz * z - w);
+}
+function pick(px, py) {
+  if (!cur || !shown) return null;
+  const { ro, rd } = rayAt(px, py), sc = sceneFn(), bs = boundSphere(cur.shape.b);
+  const ground = cur.tight ? cur.tight[2] : cur.shape.b[2];
+  const tg = rd[2] < 0 && ro[2] > ground ? (ground - ro[2]) / rd[2] : Infinity;
+  const oc = v3.sub(ro, bs), b = v3.dot(oc, rd), c = v3.dot(oc, oc) - bs[3] * bs[3], hh = b * b - c;
+  if (hh > 0) {
+    const s = Math.sqrt(hh); let t = Math.max(-b - s, 0); const t1 = Math.min(-b + s, tg);
+    for (let i = 0; i < 300 && t < t1; i++) {
+      const p = v3.add(ro, v3.mul(rd, t)), d = sc(p[0], p[1], p[2]);
+      if (d < Math.max(0.002, 0.00022 * t)) {
+        const sp = sectionPlane(), dp = cur.f(p[0], p[1], p[2]);
+        const onCut = sp && dp < v3.dot(p, sp.n) - sp.w - 1e-4;
+        return { kind: onCut ? 'cut' : 'part', p, wall: -dp };
+      }
+      t += d * 0.85;
+    }
+  }
+  if (tg < Infinity) { const p = v3.add(ro, v3.mul(rd, tg)); return { kind: 'ground', p, d: cur.f(p[0], p[1], p[2]) }; }
+  return null;
+}
+
+/* ---------- overlay: axis gizmo, measurement, hover ---------- */
+function drawOverlay() {
+  const [w, h] = viewSize(), dpr = window.devicePixelRatio || 1;
+  if (ov.width !== Math.round(w * dpr) || ov.height !== Math.round(h * dpr)) { ov.width = Math.round(w * dpr); ov.height = Math.round(h * dpr); }
+  octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  octx.clearRect(0, 0, w, h);
+  // axis gizmo
+  const B = basis(), gx = 44, gy = h - (w < 700 ? 110 : 70);
+  const axes = [[[1, 0, 0], '#ff6b5b', 'X'], [[0, 1, 0], '#7fdc8f', 'Y'], [[0, 0, 1], '#79bff5', 'Z']]
+    .map(([a, c, n]) => ({ x: v3.dot(a, B.right), y: v3.dot(a, B.up), z: v3.dot(a, B.fwd), c, n }))
+    .sort((p, q) => q.z - p.z);
+  octx.font = '700 10px "B612 Mono", monospace'; octx.textAlign = 'center'; octx.textBaseline = 'middle';
+  for (const a of axes) {
+    octx.strokeStyle = a.c; octx.globalAlpha = a.z > 0.3 ? 0.45 : 1; octx.lineWidth = 2;
+    octx.beginPath(); octx.moveTo(gx, gy); octx.lineTo(gx + a.x * 22, gy - a.y * 22); octx.stroke();
+    octx.fillStyle = a.c; octx.fillText(a.n, gx + a.x * 31, gy - a.y * 31);
+  }
+  octx.globalAlpha = 1;
+  // hover marker
+  const hv = state.hover;
+  if (hv && hv.kind !== 'ground' && !state.measure.on) {
+    const s = project(hv.p);
+    if (s) { octx.strokeStyle = 'rgba(255,255,255,.7)'; octx.lineWidth = 1; octx.beginPath(); octx.arc(s[0], s[1], 4, 0, Math.PI * 2); octx.stroke(); }
+  }
+  // measurement
+  const m = state.measure;
+  if (m.on || m.a) {
+    const pts = [m.a, m.b].filter(Boolean).map(project);
+    if (m.on && hv && hv.kind !== 'ground' && m.a && !m.b) pts[1] = project(hv.p);
+    octx.strokeStyle = '#ff5a47'; octx.fillStyle = '#ff5a47'; octx.lineWidth = 1.5;
+    if (pts[0] && pts[1]) {
+      octx.setLineDash([5, 4]); octx.beginPath(); octx.moveTo(...pts[0]); octx.lineTo(...pts[1]); octx.stroke(); octx.setLineDash([]);
+      const b = m.b || (hv && hv.p);
+      if (b) {
+        const d = v3.sub(b, m.a), L = Math.hypot(...d);
+        const mx = (pts[0][0] + pts[1][0]) / 2, my = (pts[0][1] + pts[1][1]) / 2;
+        const label = `${L.toFixed(2)} mm`;
+        octx.font = '700 12px "B612 Mono", monospace';
+        const tw = octx.measureText(label).width + 12;
+        octx.fillStyle = 'rgba(20,10,8,.85)'; octx.fillRect(mx - tw / 2, my - 22, tw, 18);
+        octx.fillStyle = '#ff8a7a'; octx.fillText(label, mx, my - 13);
+      }
+    }
+    for (const s of pts) if (s) { octx.fillStyle = '#ff5a47'; octx.beginPath(); octx.arc(s[0], s[1], 3.5, 0, Math.PI * 2); octx.fill(); }
+  }
+}
+const f2 = v => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);
+function updateReadout() {
+  const el = $('#readout'), hv = state.hover, m = state.measure;
+  let s = '';
+  if (m.on && m.a && (m.b || hv)) {
+    const b = m.b || (hv && hv.kind !== 'ground' ? hv.p : null);
+    if (b) { const d = v3.sub(b, m.a); s = `<span class="rd">Δ <b>${Math.hypot(...d).toFixed(2)}</b> mm</span> · dx ${f2(d[0])} · dy ${f2(d[1])} · dz ${f2(d[2])}`; }
+  } else if (m.on) s = '<span class="rd">Measure:</span> click two points on the part. <b>Esc</b> to clear.';
+  else if (hv) {
+    const p = hv.p;
+    if (hv.kind === 'part') s = `x <b>${f2(p[0])}</b> y <b>${f2(p[1])}</b> z <b>${f2(p[2])}</b>`;
+    else if (hv.kind === 'cut') s = `section · this point is <em>${hv.wall.toFixed(2)} mm</em> inside the surface`;
+    else s = `the field here reads <em>${hv.d.toFixed(2)} mm</em>: a ball that big touches nothing, so a ray may leap that far`;
+  }
+  el.innerHTML = s;
+}
+
+/* ---------- interaction ---------- */
+const pointers = new Map();
+let drag = null;
+function touch() { lastInteract = performance.now(); dirty = true; }
+ov.addEventListener('contextmenu', e => e.preventDefault());
+ov.addEventListener('pointerdown', e => {
+  ov.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, [e.offsetX, e.offsetY]);
+  cam.anim = null;
+  drag = { x: e.offsetX, y: e.offsetY, x0: e.offsetX, y0: e.offsetY, pan: e.button !== 0 || e.shiftKey, moved: false, pinch: null };
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; drag.pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), m: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; drag.moved = true; }
+});
+ov.addEventListener('pointermove', e => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [e.offsetX, e.offsetY]);
+  if (drag && pointers.size) {
+    const [, h] = viewSize();
+    if (drag.pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      cam.dist = clamp(cam.dist * drag.pinch.d / Math.max(d, 1), 2, 5000);
+      panBy(m[0] - drag.pinch.m[0], m[1] - drag.pinch.m[1], h);
+      drag.pinch = { d, m }; touch(); return;
+    }
+    const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y;
+    drag.x = e.offsetX; drag.y = e.offsetY;
+    if (Math.hypot(e.offsetX - drag.x0, e.offsetY - drag.y0) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    if (drag.pan) panBy(dx, dy, h);
+    else { cam.yaw -= dx * 0.0085; cam.pitch = clamp(cam.pitch + dy * 0.0085, -89.4 * DEG, 89.4 * DEG); }
+    state.hover = null; state.probe = null; updateReadout();
+    touch(); return;
+  }
+  hoverAt(e.offsetX, e.offsetY);
+});
+function panBy(dx, dy, h) {
+  const B = basis(), k = 2 * cam.dist / FOCAL / h;
+  cam.t = v3.add(cam.t, v3.add(v3.mul(B.right, -dx * k), v3.mul(B.up, dy * k)));
+}
+function hoverAt(x, y) {
+  const hit = pick(x, y);
+  state.hover = hit;
+  const hadProbe = !!state.probe;
+  state.probe = hit && hit.kind === 'ground' && hit.d > 0 && !state.measure.on ? [hit.p[0], hit.p[1], hit.d] : null;
+  if (state.probe || hadProbe) dirty = true;
+  updateReadout(); drawOverlay();
+}
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (!drag) return;
+  if (!drag.moved && pointers.size === 0 && e.type === 'pointerup') clickAt(e.offsetX, e.offsetY);
+  if (pointers.size === 0) drag = null;
+}
+ov.addEventListener('pointerup', endPointer);
+ov.addEventListener('pointercancel', endPointer);
+ov.addEventListener('pointerleave', () => { if (!drag) { state.hover = null; if (state.probe) { state.probe = null; dirty = true; } updateReadout(); drawOverlay(); } });
+ov.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.dist = clamp(cam.dist * Math.exp(e.deltaY * (e.deltaMode ? 0.05 : 0.0012)), 2, 5000);
+  cam.anim = null; touch();
+}, { passive: false });
+ov.addEventListener('dblclick', e => {
+  const hit = pick(e.offsetX, e.offsetY);
+  if (hit && hit.kind !== 'ground') { animateTo({ t: hit.p }); toast('Orbiting around that point'); }
+});
+function clickAt(x, y) {
+  const m = state.measure;
+  if (!m.on) return;
+  const hit = pick(x, y);
+  if (!hit || hit.kind === 'ground') return;
+  if (!m.a || m.b) { m.a = hit.p; m.b = null; } else m.b = hit.p;
+  updateReadout(); drawOverlay();
+}
+function animateTo(target) {
+  cam.anim = { from: { t: cam.t.slice(), yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }, to: target, t0: performance.now(), dur: 420 };
+  if (target.yaw !== undefined) {   // go the short way round
+    let dy = target.yaw - cam.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); cam.anim.to = { ...target, yaw: cam.yaw + dy };
+  }
+}
+function stepAnim(now) {
+  const a = cam.anim; if (!a) return;
+  const k = clamp((now - a.t0) / a.dur, 0, 1), s = k * k * (3 - 2 * k);
+  const L = (p, q) => p + (q - p) * s;
+  if (a.to.t) cam.t = [0, 1, 2].map(i => L(a.from.t[i], a.to.t[i]));
+  if (a.to.yaw !== undefined) cam.yaw = L(a.from.yaw, a.to.yaw);
+  if (a.to.pitch !== undefined) cam.pitch = L(a.from.pitch, a.to.pitch);
+  if (a.to.dist !== undefined) cam.dist = L(a.from.dist, a.to.dist);
+  touch();
+  if (k >= 1) cam.anim = null;
+}
+function frameTarget() {
+  const b = cur?.tight || cur?.shape.b; if (!b) return null;
+  const s = sizeB(b), [w, h] = viewSize();
+  return { t: centreB(b), dist: Math.max(Math.hypot(...s) / 2, 1) * 2.7 * Math.max(1, h / w * 0.85) };
+}
+function setView(name) {
+  const v = VIEWS[name]; if (!v) return;
+  animateTo({ ...v, ...(frameTarget() || {}) });
+}
+
+/* =====================================================================
+   Analysis: sample the field on a grid for the true envelope, volume,
+   and the deepest interior point (which scales the section colours).
+   ===================================================================== */
+function sampleGrid(f, b, N) {
+  const s = sizeB(b), h = Math.max(...s) / N;
+  const g = pad(b, 2 * h);
+  const nx = Math.ceil((g[3] - g[0]) / h) + 1, ny = Math.ceil((g[4] - g[1]) / h) + 1, nz = Math.ceil((g[5] - g[2]) / h) + 1;
+  const vals = new Float32Array(nx * ny * nz);
+  let i = 0;
+  for (let k = 0; k < nz; k++) { const z = g[2] + k * h;
+    for (let j = 0; j < ny; j++) { const y = g[1] + j * h;
+      for (let q = 0; q < nx; q++) vals[i++] = f(g[0] + q * h, y, z); } }
+  return { vals, nx, ny, nz, h, o: [g[0], g[1], g[2]] };
+}
+function analyseGrid(G) {
+  const { vals, nx, ny, nz, h, o } = G;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  let vol = 0, deepest = 0;
+  const idx = (q, j, k) => q + nx * (j + ny * k);
+  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let q = 0; q < nx; q++) {
+    const i = idx(q, j, k), v = vals[i];
+    vol += clamp(0.5 - v / h, 0, 1);
+    if (v < -deepest) deepest = -v;
+    // sign changes along each axis give sub-cell positions of the envelope
+    if (q + 1 < nx) { const w = vals[i + 1]; if ((v <= 0) !== (w <= 0)) { const x = o[0] + (q + v / (v - w)) * h; if (x < lo[0]) lo[0] = x; if (x > hi[0]) hi[0] = x; } }
+    if (j + 1 < ny) { const w = vals[i + nx]; if ((v <= 0) !== (w <= 0)) { const y = o[1] + (j + v / (v - w)) * h; if (y < lo[1]) lo[1] = y; if (y > hi[1]) hi[1] = y; } }
+    if (k + 1 < nz) { const w = vals[i + nx * ny]; if ((v <= 0) !== (w <= 0)) { const z = o[2] + (k + v / (v - w)) * h; if (z < lo[2]) lo[2] = z; if (z > hi[2]) hi[2] = z; } }
+  }
+  if (!Number.isFinite(lo[0]) || !Number.isFinite(lo[1]) || !Number.isFinite(lo[2])) return null;
+  return { tight: [...lo, ...hi], volume: vol * h * h * h, deepest };
+}
+function analyseModel(m, N = 64) {
+  const r = analyseGrid(sampleGrid(m.f, pad(m.shape.b, 0.5), N));
+  if (!r) { m.tight = null; m.volume = 0; return false; }
+  Object.assign(m, r);
+  return true;
+}
+function modelFrom(shape) {
+  return { shape, f: jsf(shape.n), glsl: emitGLSL(shape.n), nodes: countNodes(shape.n), tight: null, volume: 0, deepest: 0 };
+}
+
+/* ---------- telemetry ---------- */
+const fmtDim = v => { const r = Math.round(v * 10) / 10; return Math.abs(r - Math.round(r)) < 1e-9 ? String(Math.round(r)) : r.toFixed(1); };
+function fmtMass(g) { return g >= 1000 ? (g / 1000).toFixed(2) + ' kg' : g >= 10 ? g.toFixed(1) + ' g' : g.toFixed(2) + ' g'; }
+function updateTelemetry() {
+  if (!cur || !cur.tight) { $('#tEnv').textContent = $('#tVol').textContent = $('#tMass').textContent = '—'; return; }
+  const s = sizeB(cur.tight);
+  $('#tEnv').textContent = s.map(fmtDim).join(' × ');
+  $('#tVol').textContent = (cur.volume / 1000).toFixed(2) + ' cm³';
+  $('#tMass').textContent = fmtMass(cur.volume / 1000 * state.mat.rho);
+  $('#tNodes').textContent = cur.nodes;
+}
+
+/* =====================================================================
+   STL export: surface nets on a fine grid, each vertex nudged onto
+   the surface along the field's gradient.
+   ===================================================================== */
+function meshSurface(f, b, N) {
+  const G = sampleGrid(f, b, N), { vals, nx, ny, nz, h, o } = G;
+  const cellIdx = new Int32Array((nx - 1) * (ny - 1) * (nz - 1)).fill(-1);
+  const verts = [];
+  const C = (q, j, k) => q + (nx - 1) * (j + (ny - 1) * k);
+  const V = (q, j, k) => q + nx * (j + ny * k);
+  const corners = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]];
+  const edges = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+  const cv = new Float64Array(8);
+  for (let k = 0; k < nz - 1; k++) for (let j = 0; j < ny - 1; j++) for (let q = 0; q < nx - 1; q++) {
+    let mask = 0;
+    for (let c = 0; c < 8; c++) { const [a, bb, cc] = corners[c]; cv[c] = vals[V(q + a, j + bb, k + cc)]; if (cv[c] <= 0) mask |= 1 << c; }
+    if (mask === 0 || mask === 255) continue;
+    let sx = 0, sy = 0, sz = 0, cnt = 0;
+    for (const [e0, e1] of edges) {
+      const a = cv[e0], w = cv[e1];
+      if ((a <= 0) === (w <= 0)) continue;
+      const t = a / (a - w), p0 = corners[e0], p1 = corners[e1];
+      sx += p0[0] + (p1[0] - p0[0]) * t; sy += p0[1] + (p1[1] - p0[1]) * t; sz += p0[2] + (p1[2] - p0[2]) * t; cnt++;
+    }
+    let x = o[0] + (q + sx / cnt) * h, y = o[1] + (j + sy / cnt) * h, z = o[2] + (k + sz / cnt) * h;
+    // one Newton step onto the surface, kept inside a slightly grown cell
+    const e = h * 0.25, d = f(x, y, z);
+    const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e);
+    const g2 = (gx * gx + gy * gy + gz * gz) / (4 * e * e);
+    if (g2 > 1e-8) {
+      const s = d / g2 / (2 * e);
+      const cx0 = o[0] + (q - 0.25) * h, cy0 = o[1] + (j - 0.25) * h, cz0 = o[2] + (k - 0.25) * h;
+      x = clamp(x - gx * s, cx0, cx0 + 1.5 * h); y = clamp(y - gy * s, cy0, cy0 + 1.5 * h); z = clamp(z - gz * s, cz0, cz0 + 1.5 * h);
+    }
+    cellIdx[C(q, j, k)] = verts.length / 3;
+    verts.push(x, y, z);
+  }
+  const tris = [];
+  const quad = (a, b, c, d, flip) => { if (a < 0 || b < 0 || c < 0 || d < 0) return; if (flip) tris.push(a, c, b, a, d, c); else tris.push(a, b, c, a, c, d); };
+  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let q = 0; q < nx; q++) {
+    const v0 = vals[V(q, j, k)], in0 = v0 <= 0;
+    if (q + 1 < nx && j > 0 && k > 0 && j < ny - 1 && k < nz - 1) {
+      const in1 = vals[V(q + 1, j, k)] <= 0;
+      if (in0 !== in1) quad(cellIdx[C(q, j - 1, k - 1)], cellIdx[C(q, j, k - 1)], cellIdx[C(q, j, k)], cellIdx[C(q, j - 1, k)], !in0);
+    }
+    if (j + 1 < ny && q > 0 && k > 0 && q < nx - 1 && k < nz - 1) {
+      const in1 = vals[V(q, j + 1, k)] <= 0;
+      if (in0 !== in1) quad(cellIdx[C(q - 1, j, k - 1)], cellIdx[C(q, j, k - 1)], cellIdx[C(q, j, k)], cellIdx[C(q - 1, j, k)], in0);
+    }
+    if (k + 1 < nz && q > 0 && j > 0 && q < nx - 1 && j < ny - 1) {
+      const in1 = vals[V(q, j, k + 1)] <= 0;
+      if (in0 !== in1) quad(cellIdx[C(q - 1, j - 1, k)], cellIdx[C(q, j - 1, k)], cellIdx[C(q, j, k)], cellIdx[C(q - 1, j, k)], !in0);
+    }
+  }
+  return { verts: new Float32Array(verts), tris: new Uint32Array(tris) };
+}
+function stlBlob(mesh, name) {
+  const { verts: v, tris } = mesh, n = tris.length / 3;
+  const buf = new ArrayBuffer(84 + n * 50), dv = new DataView(buf);
+  const head = `FOUNDRY ${name} mm`.slice(0, 80);
+  for (let i = 0; i < head.length; i++) dv.setUint8(i, head.charCodeAt(i) & 127);
+  dv.setUint32(80, n, true);
+  let o = 84;
+  for (let t = 0; t < n; t++) {
+    const a = tris[t * 3] * 3, b = tris[t * 3 + 1] * 3, c = tris[t * 3 + 2] * 3;
+    const ux = v[b] - v[a], uy = v[b + 1] - v[a + 1], uz = v[b + 2] - v[a + 2];
+    const wx = v[c] - v[a], wy = v[c + 1] - v[a + 1], wz = v[c + 2] - v[a + 2];
+    let nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx;
+    const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+    for (const val of [nx, ny, nz, v[a], v[a + 1], v[a + 2], v[b], v[b + 1], v[b + 2], v[c], v[c + 1], v[c + 2]]) { dv.setFloat32(o, val, true); o += 4; }
+    dv.setUint16(o, 0, true); o += 2;
+  }
+  return new Blob([buf], { type: 'model/stl' });
+}
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+const slug = s => (s || 'part').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'part';
+function exportSTL() {
+  if (!cur || !cur.tight) { toast('Nothing to export yet'); return; }
+  const N = +$('#stlRes').value;
+  toast('Casting the mesh…');
+  setTimeout(() => {
+    const t0 = performance.now();
+    const mesh = meshSurface(cur.f, cur.tight, N);
+    download(stlBlob(mesh, state.partName), `${slug(state.partName)}.stl`);
+    toast(`${slug(state.partName)}.stl · ${(mesh.tris.length / 3 / 1000).toFixed(1)}k triangles · ${Math.round(performance.now() - t0)} ms`);
+  }, 40);
+}
+
+/* =====================================================================
+   Drawing sheet. Each view is rendered to an offscreen normal+depth
+   buffer; edges are found where normals turn or depth jumps.
+   ===================================================================== */
+let fbo = null, fboTex = null, fboW = 0, fboH = 0;
+function gbuffer(model, view, w, h) {
+  if (!model.entry) model.entry = requestProgram(model.glsl.body);
+  if (!finalize(model.entry)) return null;
+  if (!fbo) { fbo = gl.createFramebuffer(); fboTex = gl.createTexture(); }
+  if (w !== fboW || h !== fboH) {
+    gl.bindTexture(gl.TEXTURE_2D, fboTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fboTex, 0);
+    fboW = w; fboH = h;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.viewport(0, 0, w, h);
+  const e = model.entry, l = e.loc, bs = boundSphere(model.shape.b);
+  bindModel(e, model.glsl.U);
+  const c = centreB(model.tight), R = Math.hypot(...sizeB(model.tight)) / 2 + 1;
+  const back = R * 3 + 10;
+  gl.uniform2f(l.uRes, w, h);
+  gl.uniform3fv(l.uPos, v3.sub(c, v3.mul(view.fwd, back)));
+  gl.uniform3fv(l.uFwd, view.fwd); gl.uniform3fv(l.uRight, view.right); gl.uniform3fv(l.uUp, view.up);
+  gl.uniform1f(l.uFocal, FOCAL); gl.uniform1f(l.uOrthoH, view.orthoH);
+  gl.uniform1i(l.uMode, 1); gl.uniform1i(l.uOrtho, 1); gl.uniform1i(l.uClipOn, 0);
+  gl.uniform4fv(l.uBound, bs); gl.uniform4f(l.uClip, 0, 0, 1, 0); gl.uniform4f(l.uProbe, 0, 0, 0, 0);
+  gl.uniform1f(l.uGround, -INF); gl.uniform1f(l.uIso, 1); gl.uniform1f(l.uThick, 1); gl.uniform1f(l.uGrid, 1);
+  gl.uniform3f(l.uBase, 1, 1, 1); gl.uniform2f(l.uMat, 0, 0.5);
+  gl.uniform2f(l.uDepth, back - R, back + R); gl.uniform2f(l.uJitter, 0, 0);
+  gl.bindVertexArray(vao);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  const px = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  dirty = true;
+  return px;
+}
+function inkView(px, w, h, ink, fill) {
+  const img = new ImageData(w, h), o = img.data;
+  const at = (x, y) => ((h - 1 - y) * w + x) * 4;
+  const nd = (i, j) => { let s = 0; for (let c = 0; c < 3; c++) s += (px[i + c] / 127.5 - 1) * (px[j + c] / 127.5 - 1); return s; };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = at(x, y), hit = px[i + 3] > 0;
+    if (!hit) continue;
+    let edge = false;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const X = x + dx, Y = y + dy;
+      if (X < 0 || Y < 0 || X >= w || Y >= h) { edge = true; break; }
+      const j = at(X, Y);
+      if (px[j + 3] === 0) { edge = true; break; }
+      if (dx + dy > 0 && nd(i, j) < 0.88) { edge = true; break; }
+      if (px[j + 3] - px[i + 3] > 5) { edge = true; break; }   // this pixel is nearer: it owns the occluding edge
+    }
+    const q = (y * w + x) * 4;
+    if (edge) { o[q] = ink[0]; o[q + 1] = ink[1]; o[q + 2] = ink[2]; o[q + 3] = 245; }
+    else if (fill) {
+      const lam = Math.max(0, (px[i] / 127.5 - 1) * -0.35 + (px[i + 1] / 127.5 - 1) * -0.45 + (px[i + 2] / 127.5 - 1) * 0.82);
+      o[q] = ink[0]; o[q + 1] = ink[1]; o[q + 2] = ink[2]; o[q + 3] = 14 + lam * 26;
+    }
+  }
+  return img;
+}
+const ORTHO = {
+  front: { fwd: [0, 1, 0], right: [1, 0, 0], up: [0, 0, 1] },
+  top: { fwd: [0, 0, -1], right: [1, 0, 0], up: [0, 1, 0] },
+  right: { fwd: [-1, 0, 0], right: [0, 1, 0], up: [0, 0, 1] },
+};
+(() => { const f = v3.norm([-1, 1, -1]), r = v3.norm(v3.cross(f, [0, 0, 1])); ORTHO.iso = { fwd: f, right: r, up: v3.cross(r, f) }; })();
+
+let noisePat = null;
+function sheetNoise(ctx) {
+  if (!noisePat) {
+    const c = document.createElement('canvas'); c.width = c.height = 160;
+    const x = c.getContext('2d'), d = x.createImageData(160, 160);
+    for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 10; }
+    x.putImageData(d, 0, 0); noisePat = c;
+  }
+  return ctx.createPattern(noisePat, 'repeat');
+}
+let sheetMode = 'part', sheetTimer = 0, sheetGeom = null;
+// The measuring cursor: hover an orthographic view to read millimetres from its datum corner.
+const sheetEl = $('#sheet'), sov = $('#sheetOv'), sovx = sov.getContext('2d');
+function clearSheetOv() { sovx.setTransform(1, 0, 0, 1, 0, 0); sovx.clearRect(0, 0, sov.width, sov.height); }
+sheetEl.addEventListener('pointermove', e => {
+  const W = sheetEl.clientWidth, H = sheetEl.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (sov.width !== Math.round(W * dpr) || sov.height !== Math.round(H * dpr)) { sov.width = Math.round(W * dpr); sov.height = Math.round(H * dpr); }
+  clearSheetOv();
+  if (!sheetGeom) return;
+  const x = e.offsetX, y = e.offsetY, s = sheetGeom.s, m = 8;
+  const hit = Object.entries(sheetGeom.views).find(([, v]) => x >= v.x0 - m && x <= v.x0 + v.w + m && y >= v.y1 - v.h - m && y <= v.y1 + m);
+  if (!hit) return;
+  const [name, v] = hit, u = (x - v.x0) / s, w = (v.y1 - y) / s;
+  sovx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  sovx.strokeStyle = 'rgba(255,140,120,.85)'; sovx.lineWidth = 0.8; sovx.setLineDash([3, 3]);
+  sovx.beginPath(); sovx.moveTo(v.x0, y); sovx.lineTo(x, y); sovx.moveTo(x, v.y1); sovx.lineTo(x, y); sovx.stroke(); sovx.setLineDash([]);
+  sovx.fillStyle = '#ff8a78'; sovx.beginPath(); sovx.arc(x, y, 2.5, 0, Math.PI * 2); sovx.fill();
+  const label = `${name.toUpperCase()}  ${v.axes[0]} ${u.toFixed(1)}  ${v.axes[1]} ${w.toFixed(1)} mm`;
+  sovx.font = '700 11px "B612 Mono", monospace';
+  const tw = sovx.measureText(label).width + 12, lx = Math.min(x + 12, W - tw - 4), ly = Math.max(y - 26, 4);
+  sovx.fillStyle = 'rgba(12,20,36,.88)'; sovx.fillRect(lx, ly, tw, 18);
+  sovx.fillStyle = '#ffb0a2'; sovx.textBaseline = 'middle'; sovx.fillText(label, lx + 6, ly + 9);
+});
+sheetEl.addEventListener('pointerleave', clearSheetOv);
+function scheduleSheet(d = 350) { clearTimeout(sheetTimer); sheetTimer = setTimeout(drawSheet, d); }
+function drawSheet() {
+  const cv = $('#sheet'), W = cv.clientWidth, H = cv.clientHeight;
+  if (!W || !H || !gl) return;
+  sheetGeom = null; clearSheetOv();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const INK = 'rgba(234,243,255,.94)', DIM = 'rgba(234,243,255,.5)', SHEET = '#15396a';
+  const fs = clamp(W / 90, 5.5, 12.5);
+  const mono = w => `${w} ${fs}px "B612 Mono", ui-monospace, monospace`;
+  // paper
+  const grd = ctx.createRadialGradient(W * .5, H * .45, 0, W * .5, H * .5, W * .75);
+  grd.addColorStop(0, '#1b4580'); grd.addColorStop(1, '#10305c');
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = sheetNoise(ctx); ctx.fillRect(0, 0, W, H);
+  // frame with zone references
+  const m = clamp(W * 0.028, 12, 26), x0 = m, y0 = m, x1 = W - m, y1 = H - m;
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.lineWidth = 0.6; ctx.strokeStyle = DIM; ctx.strokeRect(m * 0.45, m * 0.45, W - m * 0.9, H - m * 0.9);
+  ctx.fillStyle = DIM; ctx.font = mono(400); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < 6; i++) { const x = x0 + (x1 - x0) * (i + 0.5) / 6; ctx.fillText(String(6 - i), x, m * 0.73); ctx.fillText(String(6 - i), x, H - m * 0.73);
+    if (i) { const tx = x0 + (x1 - x0) * i / 6; ctx.beginPath(); ctx.moveTo(tx, m * 0.45); ctx.lineTo(tx, y0); ctx.moveTo(tx, y1); ctx.lineTo(tx, H - m * 0.45); ctx.stroke(); } }
+  for (let i = 0; i < 4; i++) { const y = y0 + (y1 - y0) * (i + 0.5) / 4; ctx.fillText('DCBA'[i], m * 0.73, y); ctx.fillText('DCBA'[i], W - m * 0.73, y);
+    if (i) { const ty = y0 + (y1 - y0) * i / 4; ctx.beginPath(); ctx.moveTo(m * 0.45, ty); ctx.lineTo(x0, ty); ctx.moveTo(x1, ty); ctx.lineTo(W - m * 0.45, ty); ctx.stroke(); } }
+
+  // what to draw
+  const items = [];
+  const jobM = sheetMode === 'job' && activeJob ? jobModel(activeJob) : null;
+  if (jobM) { items.push({ m: jobM, ink: [234, 243, 255], fill: true }); if (cur?.tight) items.push({ m: cur, ink: [255, 108, 88], fill: false }); }
+  else if (cur?.tight) items.push({ m: cur, ink: [234, 243, 255], fill: true });
+
+  // title block
+  const tbH = clamp(H * 0.17, 56, 116), tbX = x0 + (x1 - x0) * 0.52, tbY = y1 - tbH;
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.1; ctx.strokeRect(tbX, tbY, x1 - tbX, tbH);
+  const cols = [0, 0.42, 0.7, 1].map(f => tbX + (x1 - tbX) * f), rows = [0, 0.42, 0.71, 1].map(f => tbY + tbH * f);
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(tbX, rows[1]); ctx.lineTo(x1, rows[1]);
+  ctx.moveTo(cols[1], rows[2]); ctx.lineTo(x1, rows[2]);
+  ctx.moveTo(cols[1], rows[1]); ctx.lineTo(cols[1], y1);
+  ctx.moveTo(cols[2], rows[1]); ctx.lineTo(cols[2], y1);
+  ctx.stroke();
+  const main = items[0]?.m;
+  const name = jobM ? activeJob.name : state.partName;
+  const field = (label, value, x, y, big) => {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = DIM; ctx.font = `400 ${fs * 0.72}px "B612 Mono", monospace`; ctx.fillText(label, x + 5, y + 4);
+    ctx.fillStyle = INK; ctx.font = big ? `700 ${fs * 1.55}px "Big Shoulders Display", sans-serif` : `700 ${fs * (W > 600 ? 1 : 0.8)}px "B612 Mono", monospace`;
+    ctx.fillText(value, x + 5, y + 4 + fs * 0.95);
+  };
+  const scaleText = s => { const k = s * (297 / W); return k >= 1 ? `${+k.toFixed(1)} : 1` : `1 : ${+(1 / k).toFixed(1)}`; };
+
+  // notes block
+  ctx.strokeRect(x0, tbY, tbX - x0 - 8, tbH);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = INK; ctx.font = mono(700);
+  ctx.fillText('NOTES', x0 + 6, tbY + 5);
+  ctx.font = `400 ${fs * 0.85}px "B612 Mono", monospace`; ctx.fillStyle = 'rgba(234,243,255,.8)';
+  const notes = jobM
+    ? [(tierOf(activeJob) === 2 ? 'UNDIMENSIONED. HOVER A VIEW TO MEASURE FROM ITS DATUM. ' : '') + activeJob.brief.toUpperCase(), cur?.tight ? `RED: YOUR PART, ALIGNED BY ENVELOPE CENTRE · FIT ${lastFit != null ? (lastFit * 100).toFixed(1) + '%' : '—'}` : 'YOUR PART WILL BE OVERLAID IN RED.']
+    : ['1. ALL DIMENSIONS IN MM. THIRD-ANGLE PROJECTION.', `2. SOLID DEFINED AS A SIGNED DISTANCE FIELD, ${main ? main.nodes : 0} NODES.`, '3. BREAK SHARP EDGES UNLESS BLENDED.'];
+  wrapText(ctx, notes.join('\n'), x0 + 6, tbY + 7 + fs * 1.3, tbX - x0 - 22, fs * 1.25, Math.floor((tbH - fs * 1.8) / (fs * 1.25)));
+
+  if (!items.length) {
+    field('PART', name.toUpperCase(), tbX, rows[0], true);
+    ctx.fillStyle = DIM; ctx.textAlign = 'center'; ctx.font = mono(400);
+    ctx.fillText('NOTHING TO DRAW YET', (x0 + x1) / 2, (y0 + tbY) / 2);
+    return;
+  }
+
+  // layout: TOP above FRONT, RIGHT beside FRONT, ISO top-right
+  const dims = sizeB(items.reduce((b, it) => { const s = sizeB(it.m.tight); return [0, 0, 0, Math.max(b[3], s[0]), Math.max(b[4], s[1]), Math.max(b[5], s[2])]; }, [0, 0, 0, 0, 0, 0]));
+  const [DX, DY, DZ] = dims.map(v => Math.max(v, 1e-3));
+  const g = clamp(W * 0.055, 26, 60);
+  const ax0 = x0 + g, ay0 = y0 + g * 0.55, ax1 = x1 - g * 0.5, ay1 = tbY - g * 0.8;
+  const s = Math.min((ax1 - ax0 - g * 1.6) / (DX + DY), (ay1 - ay0 - g * 1.4) / (DY + DZ)) * 0.9;
+  const usedW = (DX + DY) * s + g * 1.6, usedH = (DY + DZ) * s + g * 1.4;
+  const lx = ax0 + Math.max(0, (ax1 - ax0 - usedW) / 2) * 0.6, ty = ay0 + Math.max(0, (ay1 - ay0 - usedH) / 2);
+  const rect = {
+    top: { x: lx, y: ty, w: DX * s, h: DY * s },
+    front: { x: lx, y: ty + DY * s + g * 1.4, w: DX * s, h: DZ * s },
+    right: { x: lx + DX * s + g * 1.6, y: ty + DY * s + g * 1.4, w: DY * s, h: DZ * s },
+  };
+  const isoX = rect.right.x, isoY = ay0, isoW = ax1 - isoX, isoH = rect.front.y - g * 0.9 - ay0;
+  const isoDiag = Math.hypot(DX, DY, DZ);
+  const isoS = Math.min(isoW, isoH) / isoDiag * 0.95;
+  if (isoS > 0 && isoW > 40 && isoH > 40) rect.iso = { x: isoX + isoW / 2 - isoDiag * isoS / 2, y: isoY + isoH / 2 - isoDiag * isoS / 2, w: isoDiag * isoS, h: isoDiag * isoS, s: isoS };
+
+  const md = sizeB(main.tight);
+  const noDims = !!jobM && tierOf(activeJob) === 2;
+  // where each orthographic view's envelope sits, for the measuring cursor (datum = lower-left of the envelope)
+  const AX = { front: [0, 2], top: [0, 1], right: [1, 2] };
+  sheetGeom = { views: {}, s, noDims, gridStep: niceStep(Math.max(...md) / 8) };
+  for (const vn of ['front', 'top', 'right']) {
+    const r = rect[vn], [a, b] = AX[vn], cxp = r.x + r.w / 2, cyp = r.y + r.h / 2;
+    sheetGeom.views[vn] = { x0: cxp - md[a] * s / 2, y1: cyp + md[b] * s / 2, w: md[a] * s, h: md[b] * s, axes: ['XYZ'[a], 'XYZ'[b]] };
+  }
+  if (noDims) {   // an undimensioned drawing gets a measuring grid instead
+    const gs = sheetGeom.gridStep;
+    ctx.strokeStyle = 'rgba(234,243,255,.24)'; ctx.lineWidth = 0.6;
+    for (const v of Object.values(sheetGeom.views)) {
+      ctx.beginPath();
+      for (let u = 0; u <= v.w / s + 1e-6; u += gs) { ctx.moveTo(v.x0 + u * s, v.y1 + 4); ctx.lineTo(v.x0 + u * s, v.y1 - v.h - 4); }
+      for (let u = 0; u <= v.h / s + 1e-6; u += gs) { ctx.moveTo(v.x0 - 4, v.y1 - u * s); ctx.lineTo(v.x0 + v.w + 4, v.y1 - u * s); }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(234,243,255,.55)'; ctx.beginPath(); ctx.arc(v.x0, v.y1, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  const tmp = document.createElement('canvas'), tctx = tmp.getContext('2d');
+  for (const [vn, r] of Object.entries(rect)) {
+    const sc = r.s || s, P = 3;
+    const w = Math.max(4, Math.round((r.w + 2 * P) * dpr)), h = Math.max(4, Math.round((r.h + 2 * P) * dpr));
+    for (const it of items) {
+      const view = { ...ORTHO[vn], orthoH: (h / 2) / (sc * dpr) };
+      const px = gbuffer(it.m, view, w, h);
+      if (!px) continue;
+      tmp.width = w; tmp.height = h;
+      tctx.putImageData(inkView(px, w, h, it.ink, it.fill), 0, 0);
+      ctx.drawImage(tmp, r.x - P, r.y - P, w / dpr, h / dpr);
+    }
+    ctx.fillStyle = DIM; ctx.font = `400 ${fs * 0.78}px "B612 Mono", monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const lab = vn.toUpperCase() + (vn === 'iso' ? '' : '');
+    ctx.fillText(lab, r.x + r.w / 2, vn === 'top' || vn === 'iso' ? r.y - fs * 1.5 : r.y + r.h + g * 0.75);
+  }
+  // dimensions from the main item
+  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 0.8; ctx.font = mono(400);
+  const f = rect.front, t = rect.top, cx = (md[0] - DX) / 2 * s, cz = (md[2] - DZ) / 2 * s, cy = (md[1] - DY) / 2 * s;
+  if (!noDims) {
+    dimH(ctx, f.x - cx, f.x + f.w + cx, f.y + f.h - cz, f.y + f.h + g * 0.42, fmtDim(md[0]), fs);
+    dimV(ctx, f.y - cz, f.y + f.h + cz, f.x - cx, f.x - g * 0.45, fmtDim(md[2]), fs);
+    dimV(ctx, t.y - cy, t.y + t.h + cy, t.x - cx, t.x - g * 0.45, fmtDim(md[1]), fs);
+  } else {
+    ctx.fillStyle = DIM; ctx.font = `400 ${fs * 0.8}px "B612 Mono", monospace`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(`DO NOT SCALE? SCALE IT. GRID ${fmtDim(sheetGeom.gridStep)} MM · DOT = DATUM`, f.x - cx, f.y + f.h + g * 0.2);
+  }
+
+  field('PART', name.toUpperCase(), tbX, rows[0], true);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillStyle = DIM; ctx.font = `400 ${fs * 0.72}px "B612 Mono", monospace`;
+  if (W > 600) ctx.fillText('FOUNDRY · SDF WORKS', x1 - 6, rows[0] + 4);
+  drawProjectionSymbol(ctx, x1 - fs * 3.2, rows[0] + (rows[1] - rows[0]) * 0.64, fs * 0.75, INK);
+  field('MATERIAL', jobM ? 'AS SPECIFIED' : state.mat.full, tbX, rows[1]);
+  field('SCALE', scaleText(s), cols[1], rows[1]);
+  field('SHEET', '1 / 1', cols[2], rows[1]);
+  field('MASS', jobM ? '—' : fmtMass(main.volume / 1000 * state.mat.rho).toUpperCase(), tbX, rows[2]);
+  field('VOLUME', (main.volume / 1000).toFixed(2) + ' CM³', cols[1], rows[2]);
+  field('DATE', new Date().toISOString().slice(0, 10), cols[2], rows[2]);
+  // the QC stamp
+  if (jobM && stamped.has(activeJob.id)) {
+    const sx = rect.iso ? rect.iso.x + rect.iso.w * 0.5 : (tbX + x1) / 2, sy = rect.iso ? rect.iso.y + rect.iso.h * 0.78 : tbY - 40;
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(-9 * DEG);
+    const sw = fs * 13, sh = fs * 4.6;
+    ctx.strokeStyle = 'rgba(255,90,71,.92)'; ctx.fillStyle = 'rgba(255,90,71,.92)'; ctx.lineWidth = 2.4;
+    roundRect(ctx, -sw / 2, -sh / 2, sw, sh, 5); ctx.stroke();
+    ctx.lineWidth = 0.9; roundRect(ctx, -sw / 2 + 4, -sh / 2 + 4, sw - 8, sh - 8, 3); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `800 ${fs * 2.1}px "Big Shoulders Display", sans-serif`; ctx.fillText('PASSED QC', 0, -fs * 0.55);
+    ctx.font = `700 ${fs * 0.8}px "B612 Mono", monospace`;
+    ctx.fillText(`FIT ${(stamped.get(activeJob.id) * 100).toFixed(1)}% · ${new Date().toISOString().slice(0, 10)}`, 0, fs * 1.25);
+    ctx.restore();
+  }
+}
+function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function wrapText(ctx, text, x, y, maxW, lh, maxLines) {
+  let n = 0;
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const word of para.split(' ')) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) { if (n++ < maxLines) ctx.fillText(line, x, y); y += lh; line = word; }
+      else line = test;
+    }
+    if (n++ < maxLines) ctx.fillText(line, x, y); y += lh;
+  }
+}
+function arrow(ctx, x, y, dx, dy, sz) {
+  ctx.beginPath(); ctx.moveTo(x, y);
+  ctx.lineTo(x - dx * sz - dy * sz * 0.33, y - dy * sz + dx * sz * 0.33);
+  ctx.lineTo(x - dx * sz + dy * sz * 0.33, y - dy * sz - dx * sz * 0.33);
+  ctx.closePath(); ctx.fill();
+}
+function dimH(ctx, xa, xb, yRef, y, label, fs) {
+  ctx.beginPath(); ctx.moveTo(xa, yRef + 3); ctx.lineTo(xa, y + 4); ctx.moveTo(xb, yRef + 3); ctx.lineTo(xb, y + 4); ctx.moveTo(xa, y); ctx.lineTo(xb, y); ctx.stroke();
+  arrow(ctx, xa, y, -1, 0, 7); arrow(ctx, xb, y, 1, 0, 7);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(label, (xa + xb) / 2, y - 3);
+}
+function dimV(ctx, ya, yb, xRef, x, label, fs) {
+  ctx.beginPath(); ctx.moveTo(xRef - 3, ya); ctx.lineTo(x - 4, ya); ctx.moveTo(xRef - 3, yb); ctx.lineTo(x - 4, yb); ctx.moveTo(x, ya); ctx.lineTo(x, yb); ctx.stroke();
+  arrow(ctx, x, ya, 0, -1, 7); arrow(ctx, x, yb, 0, 1, 7);
+  ctx.save(); ctx.translate(x - 3, (ya + yb) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(label, 0, 0); ctx.restore();
+}
+function drawProjectionSymbol(ctx, x, y, u, ink) {   // third-angle: cone profile on the left, circles on the right
+  ctx.save(); ctx.strokeStyle = ink; ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(x - u * 2.6, y - u * 0.55); ctx.lineTo(x - u * 0.6, y - u); ctx.lineTo(x - u * 0.6, y + u); ctx.lineTo(x - u * 2.6, y + u * 0.55); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + u * 1.2, y, u, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + u * 1.2, y, u * 0.55, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+$('#pngBtn').addEventListener('click', () => $('#sheet').toBlob(b => b && download(b, `${slug(sheetMode === 'job' && activeJob ? activeJob.name : state.partName)}-drawing.png`)));
+
+/* =====================================================================
+   Commissions: blueprints to match. Graded by volume overlap (IoU).
+   ===================================================================== */
+const PASS = 0.985;
+const JOBS = [
+  { id: 'spacer', name: 'Spacer', brief: 'Ø24 disc, 8 thick, with a Ø10 bore straight through.',
+    hint: 'cyl(Ø, h) sits on the origin. .cut() removes one shape from another.', code: 'cyl(24, 8).cut(cyl(10, 9))' },
+  { id: 'die', name: 'Die blank', brief: 'An 18 mm cube with its corners trimmed off by a Ø25 sphere on the same centre.',
+    hint: '.and() keeps only what both shapes share.', code: 'box(18).and(sphere(25))' },
+  { id: 'nut', name: 'Hex nut', brief: '17 across flats, flats facing ±Y, 8 thick, with a Ø10 bore.',
+    hint: 'hex(flats, h).', code: 'hex(17, 8).cut(cyl(10, 10))' },
+  { id: 'slot', name: 'Slotted plate', brief: '50 × 30 × 5 plate. One slot through the middle along X: 6 wide, 26 long end to end.',
+    hint: '.stretch(x, y, z) pulls a shape apart: a stretched cylinder is a slot.', code: 'box(50, 30, 5).cut(cyl(6, 6).stretch(20, 0, 0))' },
+  { id: 'bracket', name: 'Angle bracket', brief: 'Base 40 × 20 × 4. An upright 4 thick and 30 tall overall, flush with the base\'s −X end. A Ø6 hole through the base, 8 mm to +X of the base\'s centre.',
+    hint: 'Build the base and upright with box().move(), then .add() them.', code: 'box(40, 20, 4).move(0, 0, 2).add(box(4, 20, 30).move(-18, 0, 15)).cut(cyl(6, 10).move(8, 0, 0))' },
+  { id: 'flange', name: 'Hub flange', brief: 'Ø50 × 6 disc. A Ø24 hub rising 14 above the disc, blended in with a 4 mm blend. Ø14 bore. Six Ø6 holes on a Ø36 circle, one on +X.',
+    hint: '.add(b, 4) blends. .polar(6) repeats a shape six times around Z.', code: 'cyl(50, 6).add(cyl(24, 20).move(0, 0, 7), 4).cut(cyl(14, 50)).cut(cyl(6, 10).move(18, 0, 0).polar(6))' },
+  { id: 'sprocket', name: 'Sprocket', brief: 'Ø40 × 6 disc with twelve 6 × 6 × 6 teeth reaching out to Ø48, one on +X. Ø12 bore.',
+    hint: 'Place one tooth on +X, then .polar(12).', code: 'cyl(40, 6).add(box(6, 6, 6).move(21, 0, 0).polar(12)).cut(cyl(12, 8))' },
+  { id: 'rook', name: 'The castle', secret: true, brief: 'No numbers this time. Read them off the drawing, and remember that the brief never tells you everything.',
+    hint: 'A foot, a tapering body blended into it, a crown, four crenels and a hollow top.',
+    code: 'cyl(26, 6).move(0, 0, 3).add(cone(20, 15, 28).move(0, 0, 20), 3).add(cyl(21, 9).move(0, 0, 38.5), 2).cut(box(12, 4, 5).move(10, 0, 41).polar(4)).cut(cyl(12, 6).move(0, 0, 42))' },
+  // Tier II: sketches, no dimensions on the drawing, and a tighter tolerance. Read sizes off the sheet with the cursor.
+  { id: 'plate', tier: 2, name: 'Nameplate', brief: 'A plate with rounded corners and a word engraved into its top face.',
+    hint: 'rect().offset(r) rounds a rectangle. text(word, height).extrude(depth) makes letters to cut with.',
+    code: "rect(64, 22).offset(3).extrude(4).cut(text('OPUS', 10).extrude(2).move(0, 0, 2))" },
+  { id: 'cam', tier: 2, name: 'Cam', brief: 'A disc and a lobe blended into one profile, with a bore through the disc.',
+    hint: 'Blend two circles with .add(b, blend), then .extrude().',
+    code: 'circle(32).add(circle(14).move(17, 0), 8).cut(circle(10)).extrude(8)' },
+  { id: 'gasket', tier: 2, name: 'Gasket', brief: 'A thin hexagonal gasket with rounded corners, a large centre opening and a bolt hole at every corner.',
+    hint: 'ngon(6, Ø) puts a corner on +X. Circles .polar(6) to match.',
+    code: 'ngon(6, 44).offset(3).cut(circle(22)).cut(circle(5).move(18, 0).polar(6)).extrude(1.5)' },
+  { id: 'bottle', tier: 2, name: 'Bottle', brief: 'Turned on a lathe: one half-profile, revolved, with a bore down the neck.',
+    hint: 'polygon([[x, y], …]) with x as the radius and y as the height, then .revolve().',
+    code: 'polygon([[0, -30], [14, -30], [16, -27], [16, 8], [7, 20], [7, 30], [0, 30]]).revolve().cut(cyl(9, 20).move(0, 0, 26))' },
+  { id: 'curve', tier: 2, name: 'Curved slot', brief: 'A square plate with rounded corners, an arced slot and a centre hole.',
+    hint: 'arc(Ø, width, degrees) is centred on +X with round ends.',
+    code: 'rect(46, 46).offset(3).cut(arc(32, 6, 120)).cut(circle(8)).extrude(5)' },
+  { id: 'spanner', tier: 2, name: 'Ring spanner', brief: 'Double-ended: two rings joined by a blended shank, a hex socket in each end, one smaller than the other.',
+    hint: 'ngon(6, …).rot(30) turns a hex so its flats face ±X.',
+    code: 'circle(26).add(rect(70, 11).move(35, 0), 5).add(circle(20).move(70, 0), 5).cut(ngon(6, 15)).cut(ngon(6, 11).rot(30).move(70, 0)).extrude(5)' },
+];
+const tierOf = j => j.tier || 1;
+const passOf = j => tierOf(j) === 2 ? 0.993 : PASS;
+const jobCache = new Map();
+function jobModel(job) {
+  let m = jobCache.get(job.id);
+  if (!m) { const r = evaluate(job.code); m = modelFrom(r.shape); analyseModel(m, 72); jobCache.set(job.id, m); }
+  return m;
+}
+let activeJob = null, lastFit = null;
+const stamped = new Map();
+try { for (const [k, v] of JSON.parse(localStorage.getItem('foundry.stamped') || '[]')) stamped.set(k, v); } catch {}
+function saveStamps() { try { localStorage.setItem('foundry.stamped', JSON.stringify([...stamped])); } catch {} }
+function fitScore(T, M) {
+  if (!T.tight || !M.tight) return 0;
+  const sh = v3.sub(centreB(T.tight), centreB(M.tight));
+  const mb = [M.tight[0] + sh[0], M.tight[1] + sh[1], M.tight[2] + sh[2], M.tight[3] + sh[0], M.tight[4] + sh[1], M.tight[5] + sh[2]];
+  const b = joinB(T.tight, mb), N = 56, h = Math.max(...sizeB(b)) / N, g = pad(b, 2 * h);
+  let inter = 0, uni = 0;
+  for (let z = g[2]; z <= g[5]; z += h) for (let y = g[1]; y <= g[4]; y += h) for (let x = g[0]; x <= g[3]; x += h) {
+    const a = clamp(0.5 - T.f(x, y, z) / h, 0, 1), c = clamp(0.5 - M.f(x - sh[0], y - sh[1], z - sh[2]) / h, 0, 1);
+    inter += Math.min(a, c); uni += Math.max(a, c);
+  }
+  return uni > 0 ? inter / uni : 0;
+}
+function regularDone() { return JOBS.filter(j => !j.secret && tierOf(j) === 1 && stamped.has(j.id)).length; }
+const TIER2_AT = 3;
+function renderJobs() {
+  const ol = $('#jobList'); ol.innerHTML = '';
+  const open = regularDone() >= 7, t2 = regularDone() >= TIER2_AT;
+  let n = 0;
+  JOBS.forEach((j, i) => {
+    if (i === 0 || tierOf(j) !== tierOf(JOBS[i - 1])) {
+      const h = document.createElement('li'); h.className = 'tier';
+      h.innerHTML = tierOf(j) === 1 ? '<b>Tier I</b> · dimensioned · 98.5%' : `<b>Tier II</b> · sketches, no dimensions · 99.3%${t2 ? '' : ` · opens after ${TIER2_AT} Tier I stamps`}`;
+      ol.appendChild(h); n = 0;
+    }
+    n++;
+    const locked = (j.secret && !open) || (tierOf(j) === 2 && !t2);
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.type = 'button'; b.className = 'job' + (locked ? ' locked' : '');
+    b.setAttribute('aria-current', activeJob === j ? 'true' : 'false');
+    const done = stamped.has(j.id);
+    const title = locked && j.secret ? '? ? ?' : j.name;
+    b.innerHTML = `<span class="no">${(tierOf(j) === 2 ? 'II·' : '') + String(n).padStart(2, '0')}</span><span class="nm">${title}</span>
+      <span class="st ${done ? 'done' : ''}">${done ? 'Stamped' : locked ? 'Locked' : 'Open'}</span>
+      <span class="bf">${j.brief}<span class="hint">${j.hint}</span></span>`;
+    b.disabled = locked;
+    b.addEventListener('click', () => selectJob(activeJob === j ? null : j));
+    li.appendChild(b); ol.appendChild(li);
+  });
+  const t2done = JOBS.filter(j => tierOf(j) === 2 && stamped.has(j.id)).length;
+  $('#jobCount').textContent = `I ${regularDone()}/7` + (stamped.has('rook') ? ' ♜' : '') + ` · II ${t2done}/6`;
+}
+function selectJob(j) {
+  activeJob = j;
+  $('#sheetJob').disabled = !j;
+  setSheetMode(j ? 'job' : 'part');
+  renderJobs(); grade();
+}
+function grade() {
+  const bar = $('#fitBar');
+  if (!activeJob) { lastFit = null; $('#fitLabel').textContent = 'Pick a commission to be graded against it.'; $('#fitNum').textContent = ''; $('#fitFill').style.width = '0'; bar.classList.remove('pass'); $('#tFit').textContent = '—'; $('#tFit').classList.remove('pass'); return; }
+  if (!cur || !cur.tight) return;
+  const T = jobModel(activeJob);
+  lastFit = fitScore(T, cur);
+  const need = passOf(activeJob), pass = lastFit >= need;
+  $('#fitBar b').style.left = (need * 100) + '%';
+  $('#fitNote').textContent = `Volume overlap with the drawing, aligned by envelope centre. ${(need * 100).toFixed(1)}% stamps it.` + (tierOf(activeJob) === 2 ? ' Hover the drawing to read sizes off it.' : '');
+  $('#fitLabel').textContent = `${activeJob.name}: ${pass ? 'within tolerance' : 'not yet'}`;
+  $('#fitNum').textContent = (lastFit * 100).toFixed(1) + '%';
+  $('#fitFill').style.width = (lastFit * 100).toFixed(1) + '%';
+  bar.classList.toggle('pass', pass);
+  $('#tFit').textContent = (lastFit * 100).toFixed(1) + '%';
+  $('#tFit').classList.toggle('pass', pass);
+  if (pass && !stamped.has(activeJob.id)) {
+    stamped.set(activeJob.id, lastFit); saveStamps();
+    const d = regularDone(), t1 = tierOf(activeJob) === 1 && !activeJob.secret;
+    const news = t1 && d === 7 ? '. A new drawing has arrived.' : t1 && d === TIER2_AT ? '. Tier II is open: sketches, and no dimensions.' : '';
+    toast(`${activeJob.name}: passed QC at ${(lastFit * 100).toFixed(1)}%` + news);
+    renderJobs();
+    setSheetMode('job');
+  }
+}
+
+/* =====================================================================
+   Parts bin
+   ===================================================================== */
+const PRESETS = {
+  'Knob': `// A grip knob: soft-blended body, fluted grip, D-shaft bore.
+const d      = param('diameter', 36, 20, 60);
+const h      = param('height', 18, 8, 30);
+const flutes = param('flutes', 14, 6, 30, 1);
+
+const body = cyl(d, h).round(1.5)               // round() grows every edge by 1.5
+  .add(cyl(d * 0.55, 6).move(0, 0, -h / 2 - 3), 3);   // skirt, blended in
+const grip = cyl(4, h + 6).move(d / 2 + 0.8, 0, 0).polar(flutes);
+const bore = cyl(6, 20)
+  .cut(box(6, 6, 20).move(0, 4.2, 0))             // the flat of the D
+  .move(0, 0, -h / 2 - 6);
+
+body.cut(grip, 1.2).cut(bore)
+`,
+  'Bracket': `// An angle bracket: blended inside corner, two holes, one slot.
+const t = param('thickness', 4, 2, 10);
+const fillet = param('fillet', 6, 0, 14);
+
+const base = box(60, 30, t).move(0, 0, t / 2);
+const wall = box(t, 30, 40).move(-30 + t / 2, 0, 20);
+const holes = cyl(6, 20).move(12, -8, 0).array(2, 0, 16, 0);
+const slot = cyl(7, 20).stretch(0, 12, 0).rot(0, 90, 0).move(-30, 0, 26);
+
+base.add(wall, fillet).cut(holes).cut(slot)
+`,
+  'Sprocket': `// A sprocket. Teeth, pitch circle and lightening holes all follow one number.
+const teeth = param('teeth', 18, 8, 40, 1);
+const R = teeth * 1.6;                       // pitch radius grows with the tooth count
+
+const blank = cyl(2 * R + 6, 6);
+const seats = cyl(5.2, 8).move(R + 1, 0, 0).polar(teeth);
+const hub   = cyl(R * 0.7, 12).move(0, 0, 3);
+const holes = cyl(R * 0.3, 10).move(R * 0.58, 0, 0).polar(5);
+
+blank.cut(seats).add(hub, 2).cut(holes).cut(cyl(8, 30))
+`,
+  'Twisted vase': `// A vase: rounded hex, twisted, hollowed, opened at the top.
+const twist = param('twist °/mm', 1.2, 0, 4);
+const wall  = param('wall', 1.6, 0.8, 4);
+
+hex(44, 90).round(3)
+  .twist(twist)
+  .shell(wall)
+  .cut(box(80, 80, 20).move(0, 0, 52))
+`,
+  'Lattice sphere': `// Gyroid infill: a part only a field can describe. Try a section cut.
+const cell = param('cell', 12, 6, 24);
+const wall = param('wall', 1.4, 0.6, 3);
+
+const skin    = sphere(50).shell(2);
+const lattice = sphere(48).and(gyroid(cell, wall));
+
+skin.add(lattice)
+  .cut(box(30, 30, 30).move(15, -15, 15))    // open one octant to look inside
+  .add(cyl(28, 4).move(0, 0, -25), 4)       // a foot to stand on
+`,
+  'Heat sink': `// An extruded heat sink: a linear array of blended fins.
+const fins  = param('fins', 9, 3, 16, 1);
+const pitch = param('pitch', 5, 3, 8);
+const width = fins * pitch + 4;
+
+const base = box(width, 40, 5).move(0, 0, 2.5);
+const fin  = box(1.6, 40, 24).move(-(fins - 1) * pitch / 2, 0, 16);
+
+base.add(fin.array(fins, pitch, 0, 0), 1.5)
+  .cut(cyl(3.4, 20).move(width / 2 - 3, 16, 0).mirror('xy'))   // four holes
+`,
+  'Goblet (revolve)': `// Sketch a half-profile, x = radius and y = height, then spin it about Z.
+const cup  = param('cup Ø', 44, 30, 60);
+const stem = param('stem Ø', 6, 3, 12);
+const wall = param('wall', 2, 1, 4);
+
+const bowl  = arc(cup, wall, 180).rot(-90).move(0, 40 + cup / 2);   // the lower half of a ring
+const shaft = rect(stem, 40).move(0, 20);
+const foot  = rect(cup * 0.8, 3).offset(1).move(0, 1.5);
+
+bowl.add(shaft, 3).add(foot, 3).revolve()
+`,
+  'Tag (text)': `// Engraved text: a stroke font, pulled into a solid and cut in.
+const label = 'FOUNDRY';            // A–Z 0–9 - . / + : ° and spaces
+const size  = param('text height', 8, 4, 14);
+const w = label.length * size + 10;
+
+rect(w, size + 10).offset(3)
+  .cut(circle(5).move(-w / 2 + 1, 0))          // key-ring hole
+  .extrude(3, 0.8)                              // 3 thick, edges rounded 0.8
+  .cut(text(label, size).move(4, 0).extrude(2).move(0, 0, 1.5))   // 1 deep
+`,
+  'Spoked wheel (sketch)': `// A flat wheel drawn in 2D: rim, hub and spokes blended, then extruded.
+const spokes = param('spokes', 5, 3, 9, 1);
+const blend  = param('blend', 3, 0, 8);
+
+const rim   = circle(70).cut(circle(60));
+const spoke = rect(30, 5).move(18, 0).polar(spokes);
+
+rim.add(circle(16)).add(spoke, blend)
+  .cut(circle(6))
+  .extrude(6, 1)
+`,
+  'Blank': `// Start here. Solids are centred on the origin, Z is up, sizes in mm.
+// The last line is the part.
+box(30, 20, 10)
+  .cut(cyl(8, 12))
+`,
+};
+
+/* =====================================================================
+   Editor, params, status
+   ===================================================================== */
+const src = $('#src'), hl = $('#hl');
+const DSL_FN = new Set(['box', 'cyl', 'sphere', 'cone', 'torus', 'hex', 'gyroid', 'union', 'param', 'rect', 'circle', 'arc', 'polygon', 'ngon', 'text']);
+const KW = new Set(['const', 'let', 'var', 'return', 'for', 'if', 'else', 'function', 'of', 'new', 'true', 'false']);
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function highlight() {
+  const out = src.value.replace(/(\/\/[^\n]*)|('[^'\n]*'?|"[^"\n]*"?)|(\b\d+(?:\.\d+)?\b)|(\.[A-Za-z_]\w*)|([A-Za-z_]\w*)|([&<>])/g,
+    (m, c, s, n, meth, id, x) => c ? `<span class="c">${esc(c)}</span>` : s ? `<span class="s">${esc(s)}</span>` : n ? `<span class="n">${n}</span>`
+      : meth ? `.<span class="m">${meth.slice(1)}</span>` : id ? (DSL_FN.has(id) ? `<span class="f">${id}</span>` : KW.has(id) ? `<span class="k">${id}</span>` : id) : esc(x));
+  hl.innerHTML = out + '\n';
+  syncScroll();
+}
+let errLineNo = null;
+function syncScroll() {
+  hl.style.transform = `translate(${-src.scrollLeft}px, ${-src.scrollTop}px)`;
+  const el = $('#errLine');
+  if (errLineNo) { el.style.display = 'block'; el.style.top = (12 + (errLineNo - 1) * 20 - src.scrollTop) + 'px'; } else el.style.display = 'none';
+}
+src.addEventListener('scroll', syncScroll);
+src.addEventListener('input', () => { highlight(); scheduleRun(); });
+src.addEventListener('keydown', e => {
+  if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    const s = src.selectionStart, t = src.selectionEnd;
+    src.setRangeText('  ', s, t, 'end'); highlight(); scheduleRun();
+  }
+});
+function setStatus(msg, cls = '') { const el = $('#status'); el.textContent = msg; el.className = 'status ' + cls; }
+
+let paramSig = '';
+function renderParams() {
+  const sig = JSON.stringify(paramSeen.map(p => [p.name, p.min, p.max, p.step]));
+  const box = $('#params');
+  if (sig === paramSig) { for (const p of paramSeen) { const out = box.querySelector(`output[data-n="${CSS.escape(p.name)}"]`); if (out) out.textContent = fmtParam(p, paramVals[p.name]); } return; }
+  paramSig = sig; box.innerHTML = '';
+  for (const p of paramSeen) {
+    const row = document.createElement('label'); row.className = 'param';
+    const name = document.createElement('span'); name.textContent = p.name; name.title = p.name;
+    const input = document.createElement('input'); input.type = 'range'; input.min = p.min; input.max = p.max; input.step = p.step; input.value = paramVals[p.name];
+    input.setAttribute('aria-label', p.name);
+    const out = document.createElement('output'); out.dataset.n = p.name; out.textContent = fmtParam(p, paramVals[p.name]);
+    input.addEventListener('input', () => { paramVals[p.name] = +input.value; out.textContent = fmtParam(p, +input.value); runNow(); });
+    row.append(name, input, out); box.appendChild(row);
+  }
+}
+function fmtParam(p, v) { const d = Math.max(0, -Math.floor(Math.log10(p.step) + 1e-9)); return (+v).toFixed(Math.min(d, 3)); }
+
+let runTimer = 0, runQueued = false;
+function scheduleRun(d = 180) { clearTimeout(runTimer); runTimer = setTimeout(runCode, d); }
+function runNow() { if (runQueued) return; runQueued = true; requestAnimationFrame(() => { runQueued = false; runCode(); }); }
+let analyseTimer = 0;
+function runCode() {
+  if (sharedPending) return;
+  const code = src.value;
+  try { localStorage.setItem('foundry.code', code); localStorage.setItem('foundry.name', state.partName); } catch {}
+  const t0 = performance.now();
+  const r = evaluate(code);
+  if (r.error) {
+    errLineNo = r.line; syncScroll();
+    setStatus((r.line ? `line ${r.line}: ` : '') + r.error + ' (still showing the last good part)', 'err');
+    return;
+  }
+  errLineNo = null; syncScroll();
+  let model;
+  try { model = modelFrom(r.shape); } catch (e) { setStatus(e.message, 'err'); return; }
+  if (!gl) { setStatus('WebGL2 is not available in this browser, so the part cannot be drawn.', 'err'); return; }
+  const cached = programs.has(model.glsl.body);
+  model.entry = requestProgram(model.glsl.body);
+  pending = { entry: model.entry, U: model.glsl.U, bound: boundSphere(r.shape.b) };
+  const keep = cur && cur.tight;
+  model.tight = keep ? cur.tight : null; model.volume = cur?.volume || 0; model.deepest = cur?.deepest || 0;
+  cur = model;
+  renderParams();
+  const ms = (performance.now() - t0).toFixed(0);
+  setStatus(`cast in ${ms} ms · ${model.nodes} field nodes · ${cached ? 'same shader, new numbers' : 'new shader'}${model.glsl.inline ? ' · many numbers, baked in' : ''}`);
+  clearTimeout(analyseTimer);
+  analyseTimer = setTimeout(analyse, 90);
+}
+function analyse() {
+  if (!cur) return;
+  if (!analyseModel(cur)) { setStatus('The part came out empty: nothing is inside the surface.', 'warn'); updateTelemetry(); return; }
+  updateTelemetry();
+  // frame on first load, and again when the part changes size so much that it would leave the view
+  const R = Math.hypot(...sizeB(cur.tight)) / 2;
+  if (!state.framed) { const f = frameTarget(); if (f) { cam.t = f.t; cam.dist = f.dist; } state.framed = true; state.frameR = R; }
+  else if (state.frameR && (R > state.frameR * 1.8 || R < state.frameR * 0.35)) { const f = frameTarget(); if (f) animateTo(f); state.frameR = R; }
+  dirty = true;
+  grade();
+  scheduleSheet();
+}
+function loadCode(code, name, frame = true) {
+  src.value = code; state.partName = name; paramVals = Object.create(null); paramSig = '';
+  src.scrollTop = 0; highlight();
+  if (frame) { state.framed = false; cam.yaw = VIEWS.iso.yaw; cam.pitch = VIEWS.iso.pitch; }
+  state.measure.a = state.measure.b = null;
+  cur = null;
+  runCode();
+}
+
+/* ---------- presets & share ---------- */
+const presetSel = $('#preset');
+for (const k of Object.keys(PRESETS)) { const o = document.createElement('option'); o.value = k; o.textContent = k; presetSel.appendChild(o); }
+presetSel.addEventListener('change', () => { const k = presetSel.value; if (k) loadCode(PRESETS[k], k); presetSel.value = ''; });
+const b64e = s => { const b = new TextEncoder().encode(s); let t = ''; for (const c of b) t += String.fromCharCode(c); return btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)));
+$('#shareBtn').addEventListener('click', async () => {
+  const url = location.href.split('#')[0] + '#c=' + b64e(src.value) + '&n=' + encodeURIComponent(state.partName);
+  try { await navigator.clipboard.writeText(url); toast(location.protocol === 'file:' ? 'Link copied (it only opens on this machine until the page is hosted)' : 'Link copied'); }
+  catch { history.replaceState(null, '', url); toast('Link is in the address bar'); }
+});
+let sharedPending = false;
+$('#runShared').addEventListener('click', () => { sharedPending = false; $('#shared').classList.remove('on'); state.framed = false; runCode(); });
+
+/* ---------- toolbar ---------- */
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+$('#frameBtn').addEventListener('click', () => { const f = frameTarget(); if (f) animateTo(f); });
+function toggleOrtho() { cam.ortho = !cam.ortho; $('#orthoBtn').setAttribute('aria-pressed', cam.ortho); touch(); }
+$('#orthoBtn').addEventListener('click', toggleOrtho);
+function setSection(axis) {
+  state.sec.axis = axis;
+  document.querySelectorAll('[data-sec]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sec === axis));
+  $('#secSlider').classList.toggle('on', !!axis);
+  touch();
+}
+document.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => setSection(b.dataset.sec)));
+$('#secPos').addEventListener('input', e => { state.sec.pos = +e.target.value; touch(); });
+$('#secFlip').addEventListener('click', () => { state.sec.flip = !state.sec.flip; touch(); });
+function toggleMeasure() {
+  const m = state.measure; m.on = !m.on; if (!m.on) m.a = m.b = null;
+  $('#measureBtn').setAttribute('aria-pressed', m.on); ov.classList.toggle('measuring', m.on);
+  state.probe = null; dirty = true; updateReadout(); drawOverlay();
+}
+$('#measureBtn').addEventListener('click', toggleMeasure);
+$('#stlBtn').addEventListener('click', exportSTL);
+const mats = $('#mats');
+for (const m of MATERIALS) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn chip';
+  b.innerHTML = `<i style="background:${m.sw}"></i>${m.name}`; b.setAttribute('aria-pressed', m === state.mat);
+  b.addEventListener('click', () => {
+    state.mat = m; mats.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    try { localStorage.setItem('foundry.mat', m.id); } catch {}
+    updateTelemetry(); touch(); if (sheetMode === 'part') scheduleSheet(60);
+  });
+  mats.appendChild(b);
+}
+function setSheetMode(mode) {
+  sheetMode = mode;
+  $('#sheetPart').setAttribute('aria-pressed', mode === 'part'); $('#sheetJob').setAttribute('aria-pressed', mode === 'job');
+  scheduleSheet(30);
+}
+$('#sheetPart').addEventListener('click', () => setSheetMode('part'));
+$('#sheetJob').addEventListener('click', () => activeJob && setSheetMode('job'));
+document.addEventListener('keydown', e => {
+  if (e.target.closest('textarea, input, select') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  const views = { 1: 'iso', 2: 'top', 3: 'front', 4: 'right' };
+  if (views[k]) setView(views[k]);
+  else if (k === 'f') { const f = frameTarget(); if (f) animateTo(f); }
+  else if (k === 'o') toggleOrtho();
+  else if (k === 's') setSection({ '': 'x', x: 'y', y: 'z', z: '' }[state.sec.axis]);
+  else if (k === 'm') toggleMeasure();
+  else if (k === 'e') exportSTL();
+  else if (k === 'escape' && state.measure.on) { state.measure.a = state.measure.b = null; updateReadout(); drawOverlay(); }
+  else return;
+  e.preventDefault();
+});
+let toastTimer = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600); }
+
+/* ---------- the loop ---------- */
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (pending && isReady(pending.entry)) {
+    if (pending.entry.error) { setStatus('Shader failed to compile: ' + pending.entry.error.slice(0, 300), 'err'); }
+    else { shown = pending; dirty = true; }
+    pending = null;
+  }
+  $('#pending').classList.toggle('on', !!pending);
+  stepAnim(now);
+  const busy = now - lastInteract < 160;
+  if (dirty || (lowRes && !busy)) {
+    render(busy ? 0.5 : 1); lowRes = busy; dirty = false; accum = busy ? JITTER.length : 1; drawOverlay();
+  } else if (accum < JITTER.length && shown) { render(1, accum); accum++; }
+}
+new ResizeObserver(() => { dirty = true; scheduleSheet(200); }).observe($('.view'));
+new ResizeObserver(() => scheduleSheet(200)).observe($('#sheet'));
+document.fonts?.ready.then(() => scheduleSheet(50));
+
+/* ---------- boot ---------- */
+try { const mid = localStorage.getItem('foundry.mat'); const m = MATERIALS.find(x => x.id === mid); if (m) mats.children[MATERIALS.indexOf(m)].click(); } catch {}
+renderJobs();
+if (!gl) setStatus('WebGL2 is not available in this browser, so the part cannot be drawn.', 'err');
+const hash = new URLSearchParams(location.hash.slice(1));
+if (location.hash === '#selftest') { loadCode(PRESETS.Knob, 'Knob'); setTimeout(selftest, 300); }
+else if (hash.get('c')) {
+  let code = null;
+  try { code = b64d(hash.get('c')); } catch {}
+  if (code != null) {
+    src.value = code; state.partName = hash.get('n') || 'Shared part'; highlight();
+    sharedPending = true; $('#shared').classList.add('on');
+    setStatus('Shared code loaded but not run. It is JavaScript, so read it first.', 'warn');
+  } else loadCode(PRESETS.Knob, 'Knob');
+} else {
+  let saved = null, name = 'Knob';
+  try { saved = localStorage.getItem('foundry.code'); name = localStorage.getItem('foundry.name') || 'Untitled'; } catch {}
+  if (saved && saved.trim()) loadCode(saved, name); else loadCode(PRESETS.Knob, 'Knob');
+}
+requestAnimationFrame(frame);
+
+/* =====================================================================
+   Self-test (open index.html#selftest): checks the maths, both
+   backends against each other, meshing and every commission.
+   ===================================================================== */
+function selftest() {
+  const out = [], ok = (c, m) => out.push((c ? 'PASS ' : 'FAIL ') + m);
+  const near = (a, b, tol) => Math.abs(a - b) <= tol;
+  const M = code => { const r = evaluate(code); if (r.error) throw new Error(code + ': ' + r.error); const m = modelFrom(r.shape); analyseModel(m, 72); return m; };
+  try {
+    let m = M('box(10)'); ok(near(m.volume, 1000, 15), `box(10) volume ${m.volume.toFixed(1)} ≈ 1000`);
+    m = M('cyl(10, 10)'); ok(near(m.volume, 785.4, 12), `cyl(10,10) volume ${m.volume.toFixed(1)} ≈ 785.4`);
+    m = M('sphere(10)'); ok(near(m.volume, 523.6, 10), `sphere(10) volume ${m.volume.toFixed(1)} ≈ 523.6`);
+    m = M('box(40, 20, 10).move(3, 0, 0)'); ok(m.tight.every((v, i) => near(v, [-17, -10, -5, 23, 10, 5][i], 0.05)), `tight bbox ${m.tight.map(v => v.toFixed(2))}`);
+    m = M('cyl(10, 4).stretch(20, 0, 0)'); ok(near(sizeB(m.tight)[0], 30, 0.1), `stretch slot length ${sizeB(m.tight)[0].toFixed(2)} ≈ 30`);
+    m = M('box(10).rot(0, 0, 45)'); ok(near(sizeB(m.tight)[0], 14.142, 0.12), `rot 45° width ${sizeB(m.tight)[0].toFixed(2)} ≈ 14.14`);
+    m = M('hex(17, 8)'); ok(near(sizeB(m.tight)[1], 17, 0.05) && near(sizeB(m.tight)[0], 19.63, 0.2), `hex flats ${sizeB(m.tight).map(v => v.toFixed(2))}`);
+    m = M('cone(20, 10, 10)'); ok(near(m.volume, Math.PI * 10 / 3 * (100 + 50 + 25), 20), `cone volume ${m.volume.toFixed(1)} ≈ ${(Math.PI * 10 / 3 * 175).toFixed(1)}`);
+    m = M('box(10).mirror("x")'); ok(near(m.volume, 1000, 15), 'mirror of a centred cube is itself');
+    // meshing: a sphere should close up (every edge shared by exactly two triangles)
+    const mesh = meshSurface(jsf(sphere(20).n), [-10, -10, -10, 10, 10, 10], 40), cnt = new Map();
+    for (let t = 0; t < mesh.tris.length; t += 3) for (let e = 0; e < 3; e++) {
+      const a = mesh.tris[t + e], b = mesh.tris[t + (e + 1) % 3], k = a < b ? a * 1e7 + b : b * 1e7 + a; cnt.set(k, (cnt.get(k) || 0) + 1);
+    }
+    ok([...cnt.values()].every(c => c === 2) && mesh.tris.length > 300, `sphere mesh watertight, ${mesh.tris.length / 3} tris`);
+    let sv = 0; const v = mesh.verts;   // signed volume shows the winding is outward
+    for (let t = 0; t < mesh.tris.length; t += 3) { const [a, b, c] = [mesh.tris[t] * 3, mesh.tris[t + 1] * 3, mesh.tris[t + 2] * 3];
+      sv += (v[a] * (v[b + 1] * v[c + 2] - v[b + 2] * v[c + 1]) - v[a + 1] * (v[b] * v[c + 2] - v[b + 2] * v[c]) + v[a + 2] * (v[b] * v[c + 1] - v[b + 1] * v[c])) / 6; }
+    ok(near(sv, 4188.8, 120), `mesh volume ${sv.toFixed(0)} ≈ 4189, outward winding`);
+    // both backends must agree: compare a GPU silhouette with JS ray casts
+    for (const [name, code] of Object.entries(PRESETS)) {
+      const pm = M(code.replace(/param\('([^']+)',\s*([\d.]+)[^)]*\)/g, '$2'));
+      const e = requestProgram(pm.glsl.body);
+      if (!finalize(e)) { ok(false, `${name}: shader error ${e.error}`); continue; }
+      const w = 48, hgt = 48, s = w / (Math.max(...sizeB(pm.tight)) * 1.2);
+      const view = { ...ORTHO.front, orthoH: (hgt / 2) / s };
+      pm.entry = e;
+      const px = gbuffer(pm, view, w, hgt);
+      const c = centreB(pm.tight);
+      let diff = 0, hits = 0;
+      for (let y = 0; y < hgt; y++) for (let x = 0; x < w; x++) {
+        const gpu = px[(y * w + x) * 4 + 3] > 0;
+        const ux = (x + 0.5 - w / 2) / (hgt / 2) * view.orthoH, uz = (y + 0.5 - hgt / 2) / (hgt / 2) * view.orthoH;
+        let t = 0, hit = false; const R = Math.hypot(...sizeB(pm.tight)) + 20;
+        for (let i = 0; i < 400 && t < 2 * R; i++) { const d = pm.f(c[0] + ux, c[1] - R + t, c[2] + uz); if (d < 0.002) { hit = true; break; } t += d * 0.85; }
+        if (gpu !== hit) diff++; if (hit) hits++;
+      }
+      ok(diff <= w * hgt * 0.02 && hits > 20, `${name}: GPU and JS agree (${diff} of ${w * hgt} px differ, ${hits} hit)`);
+      ok(pm.volume > 0, `${name}: volume ${(pm.volume / 1000).toFixed(2)} cm³`);
+    }
+    for (const j of JOBS) {
+      const T = jobModel(j), e = requestProgram(T.glsl.body);
+      ok(finalize(e) && T.volume > 0, `${j.name}: target builds, ${(T.volume / 1000).toFixed(2)} cm³`);
+      const self = fitScore(T, M(j.code + '.move(5, -3, 2)'));
+      ok(self > 0.999, `${j.name}: moved copy fits ${(self * 100).toFixed(2)}%`);
+    }
+    const off = fitScore(jobModel(JOBS[0]), M('cyl(24, 8).cut(cyl(11, 9))'));
+    ok(off < PASS, `a 1 mm oversize bore fails the spacer (${(off * 100).toFixed(1)}%)`);
+    const off2 = fitScore(jobModel(JOBS[5]), M('cyl(50, 6).add(cyl(24, 20).move(0, 0, 7), 4).cut(cyl(14, 50)).cut(cyl(6, 10).move(18, 0, 0).polar(5))'));
+    ok(off2 < PASS, `five holes instead of six fails the flange (${(off2 * 100).toFixed(1)}%)`);
+    m = M('rect(20, 10).extrude(4)'); ok(near(m.volume, 800, 12), `extruded rect volume ${m.volume.toFixed(1)} ≈ 800`);
+    m = M('rect(10, 20).move(10, 0).revolve()'); ok(near(m.volume, Math.PI * (225 - 25) * 20, 60), `revolved ring volume ${m.volume.toFixed(0)} ≈ ${(Math.PI * 200 * 20).toFixed(0)}`);
+    m = M('polygon([[0, 0], [20, 0], [0, 10]]).extrude(2)'); ok(near(m.volume, 200, 6), `triangle prism volume ${m.volume.toFixed(1)} ≈ 200`);
+    m = M('ngon(6, 20).extrude(1)'); ok(near(m.volume, 1.5 * Math.sqrt(3) * 100, 6), `hex ngon area ${m.volume.toFixed(1)} ≈ 259.8`);
+    m = M('arc(40, 4, 360).extrude(4)'); ok(near(m.volume, Math.PI * 40 * 4 * 4, 25), `full arc = ring, volume ${m.volume.toFixed(1)} ≈ 2010.6`);
+    m = M("text('I', 12, 2).extrude(1)"); ok(near(sizeB(m.tight)[1], 14, 0.1), `text height with stroke ${sizeB(m.tight)[1].toFixed(2)} ≈ 14`);
+    const E3 = evaluate('rect(10)'); ok(E3.error && /extrude/.test(E3.error), 'a bare sketch asks to be extruded');
+    const E4 = evaluate('box(10).add(circle(4))'); ok(E4.error && /sketch/.test(E4.error), 'mixing a sketch into a solid is explained');
+    const E5 = evaluate("text('ÆX', 5)"); ok(E5.error && /glyph/.test(E5.error), 'unknown glyph is reported');
+    const off3 = fitScore(jobModel(JOBS.find(j => j.id === 'cam')), M('circle(32).add(circle(14).move(17.5, 0), 8).cut(circle(10)).extrude(8)'));
+    ok(off3 < 0.993, `a 0.5 mm lobe error fails tier II (${(off3 * 100).toFixed(2)}%)`);
+    const E = evaluate('box(10).cut(3)'); ok(!!E.error, 'bad argument is reported: ' + E.error);
+    const E2 = evaluate('const a = box(10);\nconst b = a.move("x");\nb'); ok(E2.error && E2.line === 2, `error line reported (${E2.line})`);
+  } catch (e) { ok(false, 'threw: ' + e.stack); }
+  const pre = $('#selftest'); pre.hidden = false; pre.textContent = out.join('\n');
+  document.title = out.some(l => l.startsWith('FAIL')) ? 'SELFTEST FAIL' : 'SELFTEST PASS';
+  console.log(out.join('\n'));
+}
+})();
+</script>
+</body>
+</html>
