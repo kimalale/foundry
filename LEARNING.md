@@ -89,10 +89,32 @@ Both parts are sampled on a shared grid, after moving yours so the two envelope 
 
 `meshSurface()` puts one vertex in every grid cell the surface passes through, at the average of the points where the field crosses zero along the cell's edges. It then nudges each vertex onto the surface with one Newton step along the gradient. Every grid edge that crosses the surface becomes a quad joining the four cells around it, wound so that it faces outward. The result is closed by construction; the self-test checks that every edge is shared by exactly two triangles, and that the signed volume is positive and matches the sphere's.
 
+
+## Assemblies: clearance comes free with the field
+
+For two solids A and B, **the gap between them is the smallest value B's field takes anywhere on A's surface**. The page puts points on each part's surface (the surface-nets vertices, each nudged onto the surface by two Newton steps), evaluates the other part's field at every one, and takes the minimum. A positive minimum is the clearance. A negative one is the depth of the overlap, and a grid count of the points inside both parts gives its volume. `gapBetween()` is under ten lines. A 0.2 mm running fit measures 0.200.
+
+The exploded view doesn't move anything either: each part's function is sampled at `p − offset`, and the offsets are uniforms, so the slider never recompiles the shader.
+
+## Machining: what a 3-axis mill can see
+
+A 3-axis mill only reaches down from above, so the part is reduced to a **heightmap**: for every column (x, y), the highest solid point, found by ray marching straight down through the field (`planMill()`, step 1).
+
+- **Tool compensation** (`toolComp`): a flat cutter of radius r may lower its tip at (x, y) only to the tallest heightmap value inside its footprint disc. For a ball cutter, each neighbour's height is raised by `√(r² − d²) − r`, the shape of the ball. This is a *max-filter*, the mirror image of the soft min used for fillets.
+- **Roughing** rasters a flat end mill at stepped depths and stays 0.3 mm above the compensated surface. **Finishing** rides a ball end mill along the ball-compensated surface. A pass is kept only if it removes material, which the planner checks by simulating each pass as it goes.
+- **Simulation**: the stock is another heightmap. Every tool position lowers the cells under the cutter to the cutter's shape. On screen, the stock is a heightfield raymarched from a floating-point texture. A heightfield isn't a true distance (a tall wall beside a low floor fools it), so the renderer steps cautiously there.
+- **Undercuts**: whatever the finished stock holds beyond the part's true volume is material the tool could not reach. A side hole through a 20 mm block reports about π·3²·20 ≈ 565 mm³.
+
+## The sandbox
+
+Share links and the gallery run other people's code. The whole language is written as one function, `DSL()`, which runs in the page for trusted presets and is also turned into source text for a **Web Worker**. The worker has no DOM and no page storage, and the page kills it if it runs longer than 2.5 s. It returns only JSON: a tree of nodes. `validNode()` then checks every node's type, field names and the finiteness of every number *before* the GLSL compiler sees it, because the compiler writes numbers into shader source.
+
 ## Things worth trying
 
 - Load **Lattice sphere**, cut along Y, and drag `cell`. That gyroid infill is a single line: `sphere(48).and(gyroid(cell, wall))`. In boundary CAD it would mean thousands of faces.
 - Load **Knob** and set `.cut(grip, 1.2)` to `0`, then to `4`. Watch how far the soft cut spreads.
 - Try `box(20).add(sphere(24).move(0, 0, 12), 6)` and increase the blend until the two shapes melt into one.
 - Load **Twisted vase**, remove the `* inv` scaling in `jsf`'s `twi` case (and `${L(n.a[1])}` in GLSL), and watch the renderer fail. That is the Lipschitz bound at work.
+- Load **Pillow block (assembly)**, push `shaft Ø` past `bore Ø`, and cut along Y: the red ring is the interference.
+- Press **Machine** on the **Knob**. The rounded top edge and the skirt underneath create an overhang, and the report tells you how much a second setup would have to remove.
 - Cut the **Bracket** along X and look at the colours in the fillet. The blended corner is visibly the thickest region.

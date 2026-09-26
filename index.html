@@ -168,7 +168,7 @@
   .jobs li.tier { padding: 10px 8px 3px; font: 400 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
   .jobs li.tier b { color: var(--muted); font-weight: 700; }
   .jobs li.tier:first-child { padding-top: 4px; }
-  .job { grid-template-columns: 34px 1fr auto; }
+  .job { grid-template-columns: 42px 1fr auto; }
   .job .nm { font: 700 14px/1.2 var(--sans); }
   .job .st { font: 700 9.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
   .job .st.done { color: var(--red); }
@@ -190,6 +190,35 @@
   #sheet { width: 100%; aspect-ratio: 297 / 210; display: block; border-radius: 0 0 6px 6px; cursor: crosshair; }
   #sheetOv { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 
+  .asm { border-top: 1px solid var(--line); padding: 8px 12px 10px; font: 11.5px var(--mono); max-height: 30%; overflow: auto; }
+  .asm-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--muted); font-weight: 700; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; }
+  .asm-head label { display: flex; align-items: center; gap: 8px; letter-spacing: .04em; text-transform: none; font-weight: 400; }
+  .asm-head input { width: 110px; }
+  .asm ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; }
+  .asm li { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+  .asm li i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 6px; }
+  .asm li span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .asm li.bad, .asm li.bad span:last-child { color: var(--red); }
+  .asm li.ok span:last-child { color: var(--green); }
+  .millbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 96px; width: min(640px, calc(100% - 20px)); display: grid; grid-template-columns: auto auto 1fr auto; gap: 6px 8px; align-items: center;
+    background: rgba(11, 13, 16, .86); border: 1px solid var(--line-hi); border-radius: 6px; padding: 8px 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .millbar[hidden] { display: none; }
+  .millinfo { grid-column: 1 / -1; font: 11px/1.45 var(--mono); color: var(--muted); }
+  .millinfo b { color: var(--amber); font-weight: 400; }
+  dialog#gallery { width: min(1100px, calc(100% - 24px)); max-height: calc(100vh - 48px); background: var(--panel); color: var(--text); border: 1px solid var(--line-hi); border-radius: 8px; padding: 0; }
+  dialog#gallery::backdrop { background: rgba(4, 6, 9, .72); }
+  .gal-head { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+  .gal-head h2 { margin: 0; font: 800 30px/1 var(--display); text-transform: uppercase; letter-spacing: .03em; }
+  .gal-head .r { margin-left: auto; display: flex; gap: 6px; }
+  .gal-note { margin: 0; padding: 10px 16px 0; color: var(--muted); font-size: 12px; }
+  .gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 14px 16px 18px; }
+  .card { background: var(--raise); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: grid; }
+  .card canvas { width: 100%; aspect-ratio: 24 / 17; display: block; background: #07080a; }
+  .card div { padding: 8px 10px 10px; display: grid; gap: 4px; }
+  .card h3 { margin: 0; font: 700 14px/1.2 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card p { margin: 0; color: var(--muted); font: 11px var(--mono); }
+  .card .row { display: flex; gap: 6px; align-items: center; padding: 0; }
+  .card a { color: var(--blue); font: 11px var(--mono); margin-left: auto; }
   footer { color: var(--faint); font: 11px/1.7 var(--mono); display: flex; flex-wrap: wrap; gap: 4px 18px; }
   footer kbd { font: inherit; color: var(--muted); border: 1px solid var(--line-hi); border-radius: 3px; padding: 0 4px; }
   .toast {
@@ -234,6 +263,7 @@
           <select id="preset" class="btn" aria-label="Load a part from the parts bin">
             <option value="">Parts bin…</option>
           </select>
+          <button id="galleryBtn" class="btn" type="button">Gallery</button>
           <button id="shareBtn" class="btn" type="button">Share</button>
         </div>
       </div>
@@ -244,6 +274,11 @@
         <textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Part code"></textarea>
       </div>
       <div id="params" class="params" aria-label="Parameters"></div>
+      <div id="asm" class="asm" hidden>
+        <div class="asm-head"><span>Assembly</span><label>Explode <input id="explode" type="range" min="0" max="1" step="0.01" value="0"></label></div>
+        <ul id="asmParts"></ul>
+        <ul id="asmClear"></ul>
+      </div>
       <div id="status" class="status" role="status" aria-live="polite"></div>
       <details class="ref">
         <summary>Reference</summary>
@@ -295,6 +330,11 @@
             <dt>.shell(t)</dt><dd>hollow skin t thick</dd>
             <dt>.twist(°/mm)</dt><dd>twist about Z</dd>
           </dl>
+          <h4>Assemblies</h4>
+          <dl>
+            <dt>assembly({ a: …, b: … })</dt><dd>named parts, each in its own colour; clearances are measured</dd>
+            <dt>given('bushing')</dt><dd>a fixed part to fit against: 'bushing', 'hub', 'plate'</dd>
+          </dl>
           <h4>Inputs</h4>
           <dl>
             <dt>param(name, v, min, max, step)</dt><dd>a live slider</dd>
@@ -331,6 +371,15 @@
       </div>
       <div id="readout" class="readout"></div>
       <div id="pending" class="pending">compiling shader…</div>
+      <div id="millBar" class="millbar" hidden>
+        <button id="millPlay" class="btn" type="button" aria-label="Play or pause">❚❚</button>
+        <select id="millSpeed" class="btn" aria-label="Simulation speed">
+          <option value="20">20×</option><option value="80" selected>80×</option><option value="300">300×</option><option value="1500">1500×</option>
+        </select>
+        <input id="millScrub" type="range" min="0" max="1000" value="0" aria-label="Machining progress">
+        <button id="millExit" class="btn" type="button">Done</button>
+        <div id="millInfo" class="millinfo"></div>
+      </div>
       <div class="tools bl" id="mats" role="group" aria-label="Material"></div>
       <div class="tools br">
         <button id="measureBtn" class="btn red" type="button" aria-pressed="false" title="M">Measure</button>
@@ -340,6 +389,7 @@
           <option value="210">Max</option>
         </select>
         <button id="stlBtn" class="btn" type="button" title="E">Export STL</button>
+        <button id="millBtn" class="btn" type="button" title="C">Machine</button>
       </div>
     </section>
 
@@ -370,12 +420,27 @@
 
   <footer>
     <span><kbd>1</kbd>–<kbd>4</kbd> views</span><span><kbd>F</kbd> frame</span><span><kbd>O</kbd> ortho</span>
-    <span><kbd>S</kbd> section</span><span><kbd>M</kbd> measure</span><span><kbd>E</kbd> export STL</span>
+    <span><kbd>S</kbd> section</span><span><kbd>M</kbd> measure</span><span><kbd>E</kbd> export STL</span><span><kbd>C</kbd> machine</span>
     <span>double-click the part to orbit around that point</span><span>hover the floor to see the field</span>
   </footer>
   <pre id="selftest" hidden></pre>
 </div>
 <div id="toast" class="toast" role="status"></div>
+<dialog id="gallery" aria-label="Gallery">
+  <div class="gal-head">
+    <h2>Gallery</h2>
+    <div class="seg" role="group" aria-label="Gallery section">
+      <button class="btn" data-gtab="featured" type="button">Featured</button>
+      <button class="btn" data-gtab="community" type="button">Community</button>
+    </div>
+    <div class="r">
+      <button id="galSubmit" class="btn" type="button">Submit this part</button>
+      <button id="galClose" class="btn" type="button">Close</button>
+    </div>
+  </div>
+  <p id="galNote" class="gal-note"></p>
+  <div id="galGrid" class="gal-grid"></div>
+</dialog>
 
 <script>
 (() => {
@@ -391,6 +456,13 @@ const niceStep = x => { const p = Math.pow(10, Math.floor(Math.log10(x))); const
    conservative bounding box [x0,y0,z0,x1,y1,z1] so the renderer knows
    where to look and the analysis knows where to sample.
    ===================================================================== */
+function DSL() {
+'use strict';
+// This whole function is also stringified into a Web Worker, so it must not touch anything outside itself.
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const DEG = Math.PI / 180;
+const INF = 1e9;
+const niceStep = x => { const p = Math.pow(10, Math.floor(Math.log10(x))); const m = x / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; };
 function num(v, what) {
   if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`${what} needs a number, got ${typeof v === 'object' ? 'a shape' : v}`);
   return v;
@@ -662,24 +734,140 @@ function param(name, v, min, max, step) {
   if (cur === undefined || cur < min || cur > max) cur = paramVals[name] = v;
   return cur;
 }
-Object.assign(window, { box, cyl, sphere, cone, torus, hex, gyroid, union, param, rect, circle, arc, polygon, ngon, text,
+/* ---------- assemblies: several named parts, and fixed parts to fit against ---------- */
+class Assembly { constructor(parts) { this.parts = parts; } }
+function assembly(spec) {
+  let entries;
+  if (Array.isArray(spec)) entries = spec.map((s, i) => Array.isArray(s) ? s : ['part ' + (i + 1), s]);
+  else if (spec && typeof spec === 'object' && !(spec instanceof Shape) && !(spec instanceof Sketch)) entries = Object.entries(spec);
+  else throw new Error('assembly() takes named parts: assembly({ base: box(20), pin: cyl(4, 30) })');
+  if (entries.length < 1 || entries.length > 12) throw new Error('assembly() takes 1 to 12 parts');
+  return new Assembly(entries.map(([name, sh]) => {
+    isShape(sh, `assembly part "${name}"`);
+    if (unbounded(sh.b)) throw new Error(`assembly part "${name}" goes on forever`);
+    return { name: String(name).slice(0, 24), n: sh.n, b: sh.b };
+  }));
+}
+const GIVEN = {
+  bushing: 'cyl(24, 20).cut(cyl(10, 22))',
+  hub: 'cyl(30, 12).cut(cyl(12, 14)).cut(box(4, 4, 14).move(0, 7, 0))',
+  plate: 'box(40, 40, 6).cut(hex(12, 8))',
+};
+function given(id) {
+  const code = GIVEN[id];
+  if (!code) throw new Error(`given() knows: ${Object.keys(GIVEN).map(k => `'${k}'`).join(', ')}`);
+  const sh = (0, eval)('"use strict";' + code);
+  return new Shape({ ...sh.n, tag: 'given:' + id }, sh.b);
+}
+
+Object.assign(globalThis, { box, cyl, sphere, cone, torus, hex, gyroid, union, param, rect, circle, arc, polygon, ngon, text, assembly, given,
   PI: Math.PI, sin: Math.sin, cos: Math.cos, tan: Math.tan, sqrt: Math.sqrt, hypot: Math.hypot });
 
-function evaluate(code) {
-  paramSeen = [];
+function evaluate(code, vals) {
+  paramSeen = []; paramVals = Object.assign(Object.create(null), vals || {});
+  const out = () => ({ params: paramSeen, vals: Object.assign({}, paramVals) });
   let v;
   try { v = (0, eval)('"use strict";' + code); }
   catch (e) {
     const m = /<anonymous>:(\d+):(\d+)/.exec(e.stack || '');
-    return { error: (e.message || String(e)), line: m ? +m[1] : null };
+    return { ...out(), error: (e && e.message) || String(e), line: m ? +m[1] : null };
   }
+  if (v instanceof Assembly) return { ...out(), asm: v.parts };
+  const r = check(v);
+  return r.error ? r : { ...out(), shape: v };
+}
+function check(v) {
   if (v instanceof Sketch) return { error: 'The last line is a 2D sketch. Give it thickness: add .extrude(5) or .revolve() to the end.' };
   if (!(v instanceof Shape)) return { error: 'The last line should be the part, for example box(20). It is what gets cast.' };
   if (unbounded(v.b)) return { error: 'This part goes on forever. Intersect gyroid() with a solid: sphere(40).and(gyroid(10, 1))' };
   if (v.b[3] <= v.b[0] || v.b[4] <= v.b[1] || v.b[5] <= v.b[2]) return { error: 'This intersection is empty: the shapes do not overlap.' };
-  return { shape: v };
+  return {};
 }
+return { Shape, Sketch, Assembly, evaluate, GIVEN, sphere, box,
+  unbounded, pad, joinB, meetB, centreB, sizeB, sym };
+}
+const DSLAPI = DSL();
+const { Shape, unbounded, pad, joinB, meetB, centreB, sizeB } = DSLAPI;
+const evaluate = (code, vals) => DSLAPI.evaluate(code, vals);   // trusted code only: presets, commissions, self-test
+let paramVals = Object.create(null), paramSeen = [];   // the page's copy; the sandbox gets paramVals and returns both
 function countNodes(n) { return 1 + (Array.isArray(n.c) ? n.c.reduce((s, c) => s + countNodes(c), 0) : n.c ? countNodes(n.c) : 0); }
+
+/* =====================================================================
+   The sandbox. Code typed by you, opened from a share link or from the
+   community gallery runs inside a Web Worker: no page, no storage, and
+   it is killed if it runs too long. Only plain data comes back, and
+   every node is checked before it reaches the shader compiler.
+   ===================================================================== */
+const WORKER_SRC = `const API = (${DSL.toString()})();
+self.onmessage = e => {
+  const { id, code, vals } = e.data; let out;
+  try {
+    const r = API.evaluate(code, vals);
+    out = { id, error: r.error, line: r.line, params: r.params, vals: r.vals };
+    if (r.shape) out.shape = { n: r.shape.n, b: r.shape.b };
+    if (r.asm) out.asm = r.asm.map(p => ({ name: p.name, n: p.n, b: p.b }));
+    out = JSON.parse(JSON.stringify(out));
+  } catch (err) { out = { id, error: String((err && err.message) || err) }; }
+  self.postMessage(out);
+};`;
+function createSandbox() {
+  let w = null, seq = 0;
+  const waiting = new Map();
+  const spawn = () => {
+    w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' })));
+    w.onmessage = e => { const cb = waiting.get(e.data && e.data.id); if (cb) { waiting.delete(e.data.id); cb(e.data); } };
+  };
+  try { spawn(); } catch { return null; }
+  return {
+    run(code, vals, ms = 2500) {
+      return new Promise(res => {
+        const id = ++seq;
+        const timer = setTimeout(() => {   // an endless loop: kill the worker and start a fresh one
+          w.terminate();
+          for (const [, cb] of waiting) cb({ error: 'Stopped: the code ran for over 2.5 seconds. Is there an endless loop?' });
+          waiting.clear(); spawn();
+        }, ms);
+        waiting.set(id, d => { clearTimeout(timer); res(d); });
+        w.postMessage({ id, code, vals });
+      });
+    },
+  };
+}
+const NODE_ARITY = { box: 3, sph: 1, cyl: 2, tor: 2, cone: 3, hex: 2, gyr: 2, u: 0, i: 0, s: 0, mv: 3, rot: 0, rnd: 1, shl: 1, mir: 3, pol: 1, arr: 4, twi: 2, scl: 1, elo: 3, ext: 2, rev: 1,
+  rect: 2, circ: 1, arc: 4, poly: 0, segs: 0, mv2: 2, rot2: 2, mir2: 2, pol2: 1, arr2: 3, off2: 1, shl2: 1, scl2: 1 };
+const finiteArr = (a, n, max = 8) => Array.isArray(a) && a.length >= n && a.length <= max && a.every(v => typeof v === 'number' && Number.isFinite(v));
+function validNode(n, st = { count: 0 }, depth = 0) {
+  if (!n || typeof n !== 'object' || Array.isArray(n)) throw new Error('bad part data');
+  if (++st.count > 20000 || depth > 300) throw new Error('This part is too complex to draw.');
+  if (!Object.prototype.hasOwnProperty.call(NODE_ARITY, n.t)) throw new Error('bad part data: unknown node');
+  for (const k of Object.keys(n)) if (!['t', 'a', 'c', 'k', 'm', 'pts', 'r', 'tag'].includes(k)) throw new Error('bad part data: unexpected field');
+  if (NODE_ARITY[n.t] && !finiteArr(n.a, NODE_ARITY[n.t])) throw new Error('bad part data: numbers');
+  if ('k' in n && !(typeof n.k === 'number' && n.k >= 0 && Number.isFinite(n.k))) throw new Error('bad part data: blend');
+  if (n.t === 'rot' && !finiteArr(n.m, 9, 9)) throw new Error('bad part data: rotation');
+  if ((n.t === 'poly' || n.t === 'segs') && !(finiteArr(n.pts, 6, 800) && n.pts.length % (n.t === 'poly' ? 2 : 4) === 0)) throw new Error('bad part data: points');
+  if (n.t === 'segs' && !(typeof n.r === 'number' && n.r > 0 && Number.isFinite(n.r))) throw new Error('bad part data: stroke');
+  if ('tag' in n && !(typeof n.tag === 'string' && /^[\w:.-]{1,40}$/.test(n.tag))) throw new Error('bad part data: tag');
+  if (['u', 'i', 's'].includes(n.t)) { if (!Array.isArray(n.c) || n.c.length < 2 || n.c.length > 1000) throw new Error('bad part data'); n.c.forEach(c => validNode(c, st, depth + 1)); }
+  else if (NODE_ARITY[n.t] !== undefined && !['box', 'sph', 'cyl', 'tor', 'cone', 'hex', 'gyr', 'rect', 'circ', 'arc', 'poly', 'segs'].includes(n.t)) validNode(n.c, st, depth + 1);
+  return n;
+}
+function validResult(r) {
+  if (!r || typeof r !== 'object') return { error: 'The sandbox returned nothing.' };
+  if (r.error) return { error: String(r.error).slice(0, 400), line: Number.isInteger(r.line) ? r.line : null };
+  const params = Array.isArray(r.params) ? r.params.slice(0, 60).filter(p => p && typeof p.name === 'string' && p.name.length <= 60 && ['v', 'min', 'max', 'step'].every(k => Number.isFinite(p[k]))) : [];
+  const vals = Object.create(null);
+  for (const [k, v] of Object.entries(r.vals || {})) if (Number.isFinite(v)) vals[k] = v;
+  try {
+    const shp = x => { validNode(x.n); if (!finiteArr(x.b, 6, 6)) throw new Error('bad part data: bounds'); return { n: x.n, b: x.b }; };
+    if (r.asm) {
+      if (!Array.isArray(r.asm) || !r.asm.length || r.asm.length > 12) throw new Error('bad assembly');
+      return { params, vals, asm: r.asm.map(p => ({ ...shp(p), name: String(p.name).slice(0, 24) })) };
+    }
+    if (r.shape) return { params, vals, shape: shp(r.shape) };
+  } catch (e) { return { error: e.message }; }
+  return { error: 'The sandbox returned nothing.' };
+}
+const userBox = createSandbox();
 
 /* =====================================================================
    Backend 1: JavaScript closures. Used for analysis, picking, grading
@@ -801,7 +989,10 @@ const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, preserv
 const NU = gl ? clamp(gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) - 48, 64, 256) : 64;
 const glslNum = v => { const s = String(+v.toPrecision(9)); return '(' + (/[.e]/.test(s) ? s : s + '.0') + ')'; };
 
-function emitGLSL(root) {
+const PALETTE = [null, [0.96, 0.74, 0.40], [0.30, 0.52, 0.92], [0.95, 0.33, 0.12], [0.35, 0.78, 0.48], [0.82, 0.34, 0.62], [0.92, 0.86, 0.30], [0.55, 0.58, 0.62]];
+const DEFAULT_POST = 'vec3 surfaceColor(vec3 p, vec3 b){ return b; }\nfloat overlapCount(vec3 p){ return 0.; }';
+const progKey = g => (g.pre || '') + '\n' + g.body + '\n' + (g.post || DEFAULT_POST);
+function emitGLSL(root, parts) {
   let inline = false;
   for (;;) {
     const U = [], lines = []; let id = 0;
@@ -860,10 +1051,25 @@ function emitGLSL(root) {
       }
       throw new Error('unknown sketch node ' + n.t);
     };
-    const r = e(root, 'p');
+    const S = i => `U[${i >> 2}].${'xyzw'[i & 3]}`;
+    let body, pre = '', post = DEFAULT_POST, offs = null;
+    if (parts) {   // each part gets its own function and an offset (for the exploded view) in the uniforms
+      offs = []; const fns = [];
+      parts.forEach((pt, i) => {
+        const o = data([0, 0, 0]); offs.push(o);
+        const r = e(pt.n, 'p');
+        fns.push(`float part${i}(vec3 p){\n${lines.splice(0).join('\n')}\nreturn ${r};\n}`);
+      });
+      const at = i => `part${i}(p-vec3(${S(offs[i])},${S(offs[i] + 1)},${S(offs[i] + 2)}))`;
+      pre = fns.join('\n');
+      body = `float d=${at(0)};\n` + parts.slice(1).map((_, k) => `d=min(d,${at(k + 1)});`).join('\n') + '\nreturn d;';
+      const col = i => { const c = PALETTE[i % PALETTE.length]; return c ? `vec3(${c.map(glslNum).join(',')})` : 'b'; };
+      post = `vec3 surfaceColor(vec3 p, vec3 b){ float best=1e9, d; vec3 c=b;\n${parts.map((_, i) => `d=${at(i)}; if(d<best){best=d;c=${col(i)};}`).join('\n')}\nreturn c; }
+float overlapCount(vec3 p){ float n=0.;\n${parts.map((_, i) => `n+=step(${at(i)},0.);`).join('\n')}\nreturn n; }`;
+    } else { const r = e(root, 'p'); body = lines.splice(0).join('\n') + `\nreturn ${r};`; }
     if (!inline && U.length > NU * 4) { inline = true; continue; }   // too many numbers: bake them in instead
     if (U.length > NU * 4) throw new Error(`This part has too many sketch points for the GPU (${U.length} numbers, limit ${NU * 4}). Use fewer points or shorter text.`);
-    return { body: lines.join('\n') + `\nreturn ${r};`, U, inline };
+    return { pre, body, post, U, inline, offs };
   }
 }
 
@@ -988,7 +1194,7 @@ void main(){
     float dPart=map(p);
     bool cut = uClipOn==1 && dPart < dot(p,uClip.xyz)-uClip.w - 1e-4;
     float sh=softShadow(p+n*.004*uBound.w, L);
-    float occ=calcAO(p,n);
+    float occ=uNoAO>.5 ? .85 : calcAO(p,n);
     if(cut){
       float th=-dPart;
       float px=pxK*(uOrtho==1 ? 1. : t);
@@ -999,9 +1205,10 @@ void main(){
       vec3 tv=cross(n,tu);
       float hq=abs(fract(dot(p,tu+tv)/(uIso*.7))-.5);
       cc*=.9+.1*smoothstep(.2,.26,hq);
+      if(overlapCount(p)>1.5) cc=mix(vec3(1.,.16,.1), vec3(.35,.04,.03), step(.5,fract(dot(p,tu-tv)/(uIso*.45))));   // interference
       col=cc*(.62+.38*max(dot(n,L),0.)*(.4+.6*sh));
     } else {
-      vec3 base=uBase; float metal=uMat.x, rough=uMat.y;
+      vec3 base=surfaceColor(p,uBase); float metal=uMat.x, rough=uMat.y;
       vec3 R=reflect(rd,n);
       float fres=pow(1.-clamp(dot(n,-rd),0.,1.),5.);
       vec3 F0=mix(vec3(.04),base,metal);
@@ -1042,19 +1249,21 @@ void main(){
   outColor=vec4(col,1.);
 }`;
 
-const UNIFORMS = ['uRes', 'uPos', 'uFwd', 'uRight', 'uUp', 'uFocal', 'uOrthoH', 'uMode', 'uOrtho', 'uClipOn', 'uBound', 'uClip', 'uProbe', 'uGround', 'uIso', 'uThick', 'uGrid', 'uBase', 'uMat', 'uDepth', 'uJitter', 'U'];
-const fragSrc = body => `#version 300 es
+const UNIFORMS = ['uNoAO', 'uHeight', 'uStockMin', 'uStockMax', 'uTool', 'uToolBall', 'uToolLen', 'uCap', 'uRes', 'uPos', 'uFwd', 'uRight', 'uUp', 'uFocal', 'uOrthoH', 'uMode', 'uOrtho', 'uClipOn', 'uBound', 'uClip', 'uProbe', 'uGround', 'uIso', 'uThick', 'uGrid', 'uBase', 'uMat', 'uDepth', 'uJitter', 'U'];
+const fragSrc = g => `#version 300 es
 precision highp float;
 uniform vec2 uRes; uniform vec3 uPos, uFwd, uRight, uUp; uniform float uFocal, uOrthoH;
 uniform int uMode, uOrtho, uClipOn; uniform vec4 uBound, uClip, uProbe;
-uniform float uGround, uIso, uThick, uGrid; uniform vec3 uBase; uniform vec2 uMat, uDepth, uJitter;
+uniform float uGround, uIso, uThick, uGrid, uNoAO; uniform vec3 uBase; uniform vec2 uMat, uDepth, uJitter;
 uniform vec4 U[${NU}];
 out vec4 outColor;
 ${LIB}
+${g.pre || ''}
 float map(vec3 p){
-${body}
+${g.body}
 }
 float scene(vec3 p){ float d=map(p); return uClipOn==1 ? max(d, dot(p,uClip.xyz)-uClip.w) : d; }
+${g.post || DEFAULT_POST}
 ${MAIN}`;
 
 let vao, vs, parallel = null;
@@ -1069,11 +1278,12 @@ if (gl) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 }
-function requestProgram(body) {
+function requestProgram(g) {
+  const body = progKey(g);
   let e = programs.get(body);
   if (e) { programs.delete(body); programs.set(body, e); return e; }   // keep most-recent last
   const fs = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fs, fragSrc(body)); gl.compileShader(fs);
+  gl.shaderSource(fs, fragSrc(g)); gl.compileShader(fs);
   const prog = gl.createProgram();
   gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.bindAttribLocation(prog, 0, 'a'); gl.linkProgram(prog);
   e = { prog, fs, ready: false, error: null, loc: {}, ubuf: new Float32Array(NU * 4) };
@@ -1144,7 +1354,7 @@ function basis() {
 }
 function sectionPlane() {
   const s = state.sec;
-  if (!s.axis || !cur) return null;
+  if (!s.axis || !cur || mill.active) return null;
   const k = 'xyz'.indexOf(s.axis), b = cur.tight || cur.shape.b;
   const w = b[k] + s.pos * (b[k + 3] - b[k]);
   const n = [0, 0, 0];
@@ -1163,24 +1373,24 @@ function viewSize() { const r = canvas.parentElement.getBoundingClientRect(); re
 const JITTER = [[0, 0], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25], [-0.25, -0.25], [0, 0.4], [0.4, 0], [-0.4, 0], [0, -0.4]];
 let accum = 0;
 function render(scale, sample = 0) {
-  if (!gl || !shown) return;
+  const sh = (mill.active && mill.sh) || shown;
+  if (!gl || !sh) return;
   const [cw, ch] = viewSize();
   const dpr = Math.min(window.devicePixelRatio || 1, 1.75) * scale;
   const w = Math.round(cw * dpr), h = Math.round(ch * dpr);
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, w, h);
-  const e = shown.entry, B = basis(), l = e.loc;
-  bindModel(e, shown.U);
+  const e = sh.entry, B = basis(), l = e.loc;
+  bindModel(e, sh.U);
   gl.uniform2f(l.uRes, w, h);
   gl.uniform3fv(l.uPos, cam.ortho ? v3.sub(B.pos, v3.mul(B.fwd, cam.dist * 2)) : B.pos);
   gl.uniform3fv(l.uFwd, B.fwd); gl.uniform3fv(l.uRight, B.right); gl.uniform3fv(l.uUp, B.up);
   gl.uniform1f(l.uFocal, FOCAL); gl.uniform1f(l.uOrthoH, B.orthoH);
   gl.uniform1i(l.uMode, 0); gl.uniform1i(l.uOrtho, cam.ortho ? 1 : 0);
-  gl.uniform4fv(l.uBound, shown.bound);
-  const tb = cur?.tight || shown.bound && [shown.bound[0] - shown.bound[3], shown.bound[1] - shown.bound[3], shown.bound[2] - shown.bound[3], 0, 0, 0];
-  gl.uniform1f(l.uGround, cur?.tight ? cur.tight[2] : tb[2]);
-  const ext = cur?.tight ? Math.max(...sizeB(cur.tight)) : shown.bound[3] * 2;
+  gl.uniform4fv(l.uBound, sh.bound);
+  gl.uniform1f(l.uGround, sh.ground ?? (cur?.tight ? cur.tight[2] : sh.bound[2] - sh.bound[3]));
+  const ext = cur?.tight ? Math.max(...sizeB(cur.tight)) : sh.bound[3] * 2;
   gl.uniform1f(l.uGrid, niceStep(ext / 12));
   const sp = sectionPlane();
   gl.uniform1i(l.uClipOn, sp ? 1 : 0);
@@ -1192,6 +1402,8 @@ function render(scale, sample = 0) {
   gl.uniform3fv(l.uBase, state.mat.base); gl.uniform2f(l.uMat, state.mat.metal, state.mat.rough);
   gl.uniform2f(l.uDepth, 0, 1);
   gl.uniform2f(l.uJitter, ...JITTER[sample]);
+  gl.uniform1f(l.uNoAO, 0);
+  if (sh.extra) sh.extra(l);
   if (sample) { gl.enable(gl.BLEND); gl.blendColor(0, 0, 0, 1 / (sample + 1)); gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA); }
   gl.bindVertexArray(vao);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -1217,7 +1429,7 @@ function project(p) {
   return [w / 2 + x * h / 2, h / 2 - y * h / 2];
 }
 function sceneFn() {
-  const f = cur.f, sp = sectionPlane();
+  const f = cur.fView || cur.f, sp = sectionPlane();
   if (!sp) return f;
   const [nx, ny, nz] = sp.n, w = sp.w;
   return (x, y, z) => Math.max(f(x, y, z), nx * x + ny * y + nz * z - w);
@@ -1235,7 +1447,9 @@ function pick(px, py) {
       if (d < Math.max(0.002, 0.00022 * t)) {
         const sp = sectionPlane(), dp = cur.f(p[0], p[1], p[2]);
         const onCut = sp && dp < v3.dot(p, sp.n) - sp.w - 1e-4;
-        return { kind: onCut ? 'cut' : 'part', p, wall: -dp };
+        let part = null;
+        if (cur.asm) { let best = Infinity; for (const q of cur.asm) { const v = q.f(p[0] - q.off[0], p[1] - q.off[1], p[2] - q.off[2]); if (v < best) { best = v; part = q.name; } } }
+        return { kind: onCut ? 'cut' : 'part', p, wall: -dp, part };
       }
       t += d * 0.85;
     }
@@ -1262,6 +1476,7 @@ function drawOverlay() {
     octx.fillStyle = a.c; octx.fillText(a.n, gx + a.x * 31, gy - a.y * 31);
   }
   octx.globalAlpha = 1;
+  drawToolpath();
   // hover marker
   const hv = state.hover;
   if (hv && hv.kind !== 'ground' && !state.measure.on) {
@@ -1300,8 +1515,9 @@ function updateReadout() {
   } else if (m.on) s = '<span class="rd">Measure:</span> click two points on the part. <b>Esc</b> to clear.';
   else if (hv) {
     const p = hv.p;
-    if (hv.kind === 'part') s = `x <b>${f2(p[0])}</b> y <b>${f2(p[1])}</b> z <b>${f2(p[2])}</b>`;
-    else if (hv.kind === 'cut') s = `section · this point is <em>${hv.wall.toFixed(2)} mm</em> inside the surface`;
+    if (hv.part && hv.kind !== 'ground') s = `<em>${esc(hv.part)}</em> · `;
+    if (hv.kind === 'part') s += `x <b>${f2(p[0])}</b> y <b>${f2(p[1])}</b> z <b>${f2(p[2])}</b>`;
+    else if (hv.kind === 'cut') s += `section · this point is <em>${hv.wall.toFixed(2)} mm</em> inside the surface`;
     else s = `the field here reads <em>${hv.d.toFixed(2)} mm</em>: a ball that big touches nothing, so a ray may leap that far`;
   }
   el.innerHTML = s;
@@ -1346,6 +1562,7 @@ function panBy(dx, dy, h) {
   cam.t = v3.add(cam.t, v3.add(v3.mul(B.right, -dx * k), v3.mul(B.up, dy * k)));
 }
 function hoverAt(x, y) {
+  if (mill.active) return;
   const hit = pick(x, y);
   state.hover = hit;
   const hadProbe = !!state.probe;
@@ -1447,6 +1664,14 @@ function analyseModel(m, N = 64) {
 function modelFrom(shape) {
   return { shape, f: jsf(shape.n), glsl: emitGLSL(shape.n), nodes: countNodes(shape.n), tight: null, volume: 0, deepest: 0 };
 }
+function modelFromAsm(parts) {
+  const n = parts.length > 1 ? { t: 'u', k: 0, c: parts.map(p => p.n) } : parts[0].n;
+  const b = parts.reduce((a, p) => joinB(a, p.b), parts[0].b);
+  const m = { shape: { n, b }, f: jsf(n), glsl: emitGLSL(n, parts), nodes: countNodes(n), tight: null, volume: 0, deepest: 0 };
+  m.asm = parts.map((p, i) => ({ name: p.name, n: p.n, b: p.b, f: jsf(p.n), tag: p.n.tag || '', i, off: [0, 0, 0] }));
+  return m;
+}
+const modelFromResult = r => r.asm ? modelFromAsm(r.asm) : modelFrom(r.shape);
 
 /* ---------- telemetry ---------- */
 const fmtDim = v => { const r = Math.round(v * 10) / 10; return Math.abs(r - Math.round(r)) < 1e-9 ? String(Math.round(r)) : r.toFixed(1); };
@@ -1485,13 +1710,14 @@ function meshSurface(f, b, N) {
       sx += p0[0] + (p1[0] - p0[0]) * t; sy += p0[1] + (p1[1] - p0[1]) * t; sz += p0[2] + (p1[2] - p0[2]) * t; cnt++;
     }
     let x = o[0] + (q + sx / cnt) * h, y = o[1] + (j + sy / cnt) * h, z = o[2] + (k + sz / cnt) * h;
-    // one Newton step onto the surface, kept inside a slightly grown cell
-    const e = h * 0.25, d = f(x, y, z);
-    const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e);
-    const g2 = (gx * gx + gy * gy + gz * gz) / (4 * e * e);
-    if (g2 > 1e-8) {
+    // two Newton steps onto the surface, kept inside a slightly grown cell
+    const cx0 = o[0] + (q - 0.25) * h, cy0 = o[1] + (j - 0.25) * h, cz0 = o[2] + (k - 0.25) * h;
+    for (let it = 0, e = h * 0.25; it < 2; it++, e *= 0.25) {
+      const d = f(x, y, z);
+      const gx = f(x + e, y, z) - f(x - e, y, z), gy = f(x, y + e, z) - f(x, y - e, z), gz = f(x, y, z + e) - f(x, y, z - e);
+      const g2 = (gx * gx + gy * gy + gz * gz) / (4 * e * e);
+      if (g2 <= 1e-8) break;
       const s = d / g2 / (2 * e);
-      const cx0 = o[0] + (q - 0.25) * h, cy0 = o[1] + (j - 0.25) * h, cz0 = o[2] + (k - 0.25) * h;
       x = clamp(x - gx * s, cx0, cx0 + 1.5 * h); y = clamp(y - gy * s, cy0, cy0 + 1.5 * h); z = clamp(z - gz * s, cz0, cz0 + 1.5 * h);
     }
     cellIdx[C(q, j, k)] = verts.length / 3;
@@ -1556,10 +1782,9 @@ function exportSTL() {
    buffer; edges are found where normals turn or depth jumps.
    ===================================================================== */
 let fbo = null, fboTex = null, fboW = 0, fboH = 0;
-function gbuffer(model, view, w, h) {
-  if (!model.entry) model.entry = requestProgram(model.glsl.body);
-  if (!finalize(model.entry)) return null;
+function ensureFBO(w, h) {
   if (!fbo) { fbo = gl.createFramebuffer(); fboTex = gl.createTexture(); }
+  gl.activeTexture(gl.TEXTURE0);
   if (w !== fboW || h !== fboH) {
     gl.bindTexture(gl.TEXTURE_2D, fboTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -1570,9 +1795,22 @@ function gbuffer(model, view, w, h) {
   }
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
   gl.viewport(0, 0, w, h);
+}
+function readFBO(w, h) {
+  const px = new Uint8Array(w * h * 4);
+  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  dirty = true;
+  return px;
+}
+function gbuffer(model, view, w, h, centre) {
+  if (!model.entry) model.entry = requestProgram(model.glsl);
+  if (!finalize(model.entry)) return null;
+  ensureFBO(w, h);
   const e = model.entry, l = e.loc, bs = boundSphere(model.shape.b);
   bindModel(e, model.glsl.U);
-  const c = centreB(model.tight), R = Math.hypot(...sizeB(model.tight)) / 2 + 1;
+  const own = centreB(model.tight), c = centre || own;
+  const R = Math.hypot(...sizeB(model.tight)) / 2 + Math.hypot(...v3.sub(own, c)) + 1;
   const back = R * 3 + 10;
   gl.uniform2f(l.uRes, w, h);
   gl.uniform3fv(l.uPos, v3.sub(c, v3.mul(view.fwd, back)));
@@ -1585,11 +1823,33 @@ function gbuffer(model, view, w, h) {
   gl.uniform2f(l.uDepth, back - R, back + R); gl.uniform2f(l.uJitter, 0, 0);
   gl.bindVertexArray(vao);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
-  const px = new Uint8Array(w * h * 4);
-  gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  dirty = true;
-  return px;
+  return readFBO(w, h);
+}
+// A small shaded picture of a model, for the gallery.
+function renderThumb(m, w, h) {
+  if (!m.entry) m.entry = requestProgram(m.glsl);
+  if (!finalize(m.entry)) return null;
+  ensureFBO(w, h);
+  const e = m.entry, l = e.loc;
+  bindModel(e, m.glsl.U);
+  const c = centreB(m.tight), R = Math.max(Math.hypot(...sizeB(m.tight)) / 2, 1), yaw = VIEWS.iso.yaw, pit = VIEWS.iso.pitch;
+  const dir = [Math.cos(pit) * Math.cos(yaw), Math.cos(pit) * Math.sin(yaw), Math.sin(pit)];
+  const fwd = v3.mul(dir, -1), right = v3.norm(v3.cross(fwd, [0, 0, 1])), up = v3.cross(right, fwd);
+  const ext = Math.max(...sizeB(m.tight));
+  gl.uniform2f(l.uRes, w, h);
+  gl.uniform3fv(l.uPos, v3.add(c, v3.mul(dir, R * 2.5 * Math.max(1, (h / w) * 1.2))));
+  gl.uniform3fv(l.uFwd, fwd); gl.uniform3fv(l.uRight, right); gl.uniform3fv(l.uUp, up);
+  gl.uniform1f(l.uFocal, FOCAL); gl.uniform1f(l.uOrthoH, 1);
+  gl.uniform1i(l.uMode, 0); gl.uniform1i(l.uOrtho, 0); gl.uniform1i(l.uClipOn, 0);
+  gl.uniform4fv(l.uBound, boundSphere(m.shape.b)); gl.uniform4f(l.uClip, 0, 0, 1, 0); gl.uniform4f(l.uProbe, 0, 0, 0, 0);
+  gl.uniform1f(l.uGround, m.tight[2]); gl.uniform1f(l.uIso, niceStep(ext / 16)); gl.uniform1f(l.uThick, m.deepest || 1); gl.uniform1f(l.uGrid, niceStep(ext / 12));
+  gl.uniform3fv(l.uBase, state.mat.base); gl.uniform2f(l.uMat, state.mat.metal, state.mat.rough);
+  gl.uniform2f(l.uDepth, 0, 1); gl.uniform2f(l.uJitter, 0, 0);
+  gl.bindVertexArray(vao);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  const px = readFBO(w, h), img = new ImageData(w, h);
+  for (let y = 0; y < h; y++) img.data.set(px.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+  return img;
 }
 function inkView(px, w, h, ink, fill) {
   const img = new ImageData(w, h), o = img.data;
@@ -1687,7 +1947,12 @@ function drawSheet() {
   // what to draw
   const items = [];
   const jobM = sheetMode === 'job' && activeJob ? jobModel(activeJob) : null;
-  if (jobM) { items.push({ m: jobM, ink: [234, 243, 255], fill: true }); if (cur?.tight) items.push({ m: cur, ink: [255, 108, 88], fill: false }); }
+  if (jobM && activeJob.fit) {   // fits are drawn in place: the given part and yours share one frame
+    const C = centreB(jobM.tight);
+    items.push({ m: jobM, ink: [234, 243, 255], fill: true, centre: C });
+    if (cur?.mate?.tight) items.push({ m: cur.mate, ink: [255, 108, 88], fill: false, centre: C });
+  }
+  else if (jobM) { items.push({ m: jobM, ink: [234, 243, 255], fill: true }); if (cur?.tight) items.push({ m: cur, ink: [255, 108, 88], fill: false }); }
   else if (cur?.tight) items.push({ m: cur, ink: [234, 243, 255], fill: true });
 
   // title block
@@ -1717,7 +1982,9 @@ function drawSheet() {
   ctx.fillText('NOTES', x0 + 6, tbY + 5);
   ctx.font = `400 ${fs * 0.85}px "B612 Mono", monospace`; ctx.fillStyle = 'rgba(234,243,255,.8)';
   const notes = jobM
-    ? [(tierOf(activeJob) === 2 ? 'UNDIMENSIONED. HOVER A VIEW TO MEASURE FROM ITS DATUM. ' : '') + activeJob.brief.toUpperCase(), cur?.tight ? `RED: YOUR PART, ALIGNED BY ENVELOPE CENTRE · FIT ${lastFit != null ? (lastFit * 100).toFixed(1) + '%' : '—'}` : 'YOUR PART WILL BE OVERLAID IN RED.']
+    ? [(tierOf(activeJob) === 2 ? 'UNDIMENSIONED. HOVER A VIEW TO MEASURE FROM ITS DATUM. ' : '') + activeJob.brief.toUpperCase(),
+      activeJob.fit ? (cur?.mate ? `RED: YOUR PART, IN PLACE · GAP ${lastFit != null ? lastFit.toFixed(2) + ' MM' : '—'}` : 'BUILD AN ASSEMBLY WITH THE GIVEN PART; YOURS APPEARS IN RED.')
+      : cur?.tight ? `RED: YOUR PART, ALIGNED BY ENVELOPE CENTRE · FIT ${lastFit != null ? (lastFit * 100).toFixed(1) + '%' : '—'}` : 'YOUR PART WILL BE OVERLAID IN RED.']
     : ['1. ALL DIMENSIONS IN MM. THIRD-ANGLE PROJECTION.', `2. SOLID DEFINED AS A SIGNED DISTANCE FIELD, ${main ? main.nodes : 0} NODES.`, '3. BREAK SHARP EDGES UNLESS BLENDED.'];
   wrapText(ctx, notes.join('\n'), x0 + 6, tbY + 7 + fs * 1.3, tbX - x0 - 22, fs * 1.25, Math.floor((tbH - fs * 1.8) / (fs * 1.25)));
 
@@ -1729,7 +1996,9 @@ function drawSheet() {
   }
 
   // layout: TOP above FRONT, RIGHT beside FRONT, ISO top-right
-  const dims = sizeB(items.reduce((b, it) => { const s = sizeB(it.m.tight); return [0, 0, 0, Math.max(b[3], s[0]), Math.max(b[4], s[1]), Math.max(b[5], s[2])]; }, [0, 0, 0, 0, 0, 0]));
+  const C0 = items[0].centre;
+  const dims = C0 ? [0, 1, 2].map(k => 2 * Math.max(...items.map(it => Math.max(Math.abs(it.m.tight[k] - C0[k]), Math.abs(it.m.tight[k + 3] - C0[k])))))
+    : sizeB(items.reduce((b, it) => { const s = sizeB(it.m.tight); return [0, 0, 0, Math.max(b[3], s[0]), Math.max(b[4], s[1]), Math.max(b[5], s[2])]; }, [0, 0, 0, 0, 0, 0]));
   const [DX, DY, DZ] = dims.map(v => Math.max(v, 1e-3));
   const g = clamp(W * 0.055, 26, 60);
   const ax0 = x0 + g, ay0 = y0 + g * 0.55, ax1 = x1 - g * 0.5, ay1 = tbY - g * 0.8;
@@ -1772,7 +2041,7 @@ function drawSheet() {
     const w = Math.max(4, Math.round((r.w + 2 * P) * dpr)), h = Math.max(4, Math.round((r.h + 2 * P) * dpr));
     for (const it of items) {
       const view = { ...ORTHO[vn], orthoH: (h / 2) / (sc * dpr) };
-      const px = gbuffer(it.m, view, w, h);
+      const px = gbuffer(it.m, view, w, h, it.centre);
       if (!px) continue;
       tmp.width = w; tmp.height = h;
       tctx.putImageData(inkView(px, w, h, it.ink, it.fill), 0, 0);
@@ -1815,7 +2084,8 @@ function drawSheet() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `800 ${fs * 2.1}px "Big Shoulders Display", sans-serif`; ctx.fillText('PASSED QC', 0, -fs * 0.55);
     ctx.font = `700 ${fs * 0.8}px "B612 Mono", monospace`;
-    ctx.fillText(`FIT ${(stamped.get(activeJob.id) * 100).toFixed(1)}% · ${new Date().toISOString().slice(0, 10)}`, 0, fs * 1.25);
+    const sv = stamped.get(activeJob.id);
+    ctx.fillText(`${activeJob.fit ? `GAP ${sv.toFixed(2)} MM` : `FIT ${(sv * 100).toFixed(1)}%`} · ${new Date().toISOString().slice(0, 10)}`, 0, fs * 1.25);
     ctx.restore();
   }
 }
@@ -1900,13 +2170,60 @@ const JOBS = [
     hint: 'ngon(6, …).rot(30) turns a hex so its flats face ±X.',
     code: 'circle(26).add(rect(70, 11).move(35, 0), 5).add(circle(20).move(70, 0), 5).cut(ngon(6, 15)).cut(ngon(6, 11).rot(30).move(70, 0)).extrude(5)' },
 ];
+JOBS.push(
+  { id: 'shaft', tier: 3, name: 'Running shaft', fit: { given: 'bushing', contains: [[0, 0, -14], [0, 0, 14]], gap: [0.1, 0.3] },
+    brief: 'Given: a Ø24 × 20 bushing with a Ø10 bore along Z, centred on the origin. Add a shaft that runs right through it with 0.10–0.30 mm clearance per side.',
+    hint: "assembly({ bushing: given('bushing'), shaft: cyl(Ø, 30) })" },
+  { id: 'keyed', tier: 3, name: 'Keyed shaft', fit: { given: 'hub', contains: [[0, 0, -9], [0, 0, 9], [0, 7.5, 0]], gap: [0.05, 0.25] },
+    brief: 'Given: a Ø30 × 12 hub with a Ø12 bore and a 4 wide keyway on +Y that reaches y = 9. Make a shaft whose key fills the keyway, with 0.05–0.25 mm clearance everywhere.',
+    hint: "A cylinder plus a box for the key. given('hub') is the hub." },
+  { id: 'hexpeg', tier: 3, name: 'Hex peg', fit: { given: 'plate', contains: [[0, 0, -6], [0, 0, 6]], gap: [0.1, 0.25] },
+    brief: 'Given: a 40 × 40 × 6 plate with a hex hole 12 across flats, flats facing ±Y. Make a hex peg that passes through with 0.10–0.25 mm clearance.',
+    hint: "hex(flats, h). given('plate') is the plate." },
+);
 const tierOf = j => j.tier || 1;
 const passOf = j => tierOf(j) === 2 ? 0.993 : PASS;
 const jobCache = new Map();
 function jobModel(job) {
   let m = jobCache.get(job.id);
-  if (!m) { const r = evaluate(job.code); m = modelFrom(r.shape); analyseModel(m, 72); jobCache.set(job.id, m); }
+  if (!m) { const r = evaluate(job.fit ? `given('${job.fit.given}')` : job.code); m = modelFrom(r.shape); analyseModel(m, 72); jobCache.set(job.id, m); }
   return m;
+}
+// Grading a fit: the mating part must pass through the check points and keep the clearance band everywhere.
+function fitResult(job, model) {
+  if (!model?.asm) return { msg: `Build an assembly that includes given('${job.fit.given}').` };
+  const G = model.asm.find(p => p.tag === 'given:' + job.fit.given);
+  if (!G) return { msg: `Your assembly needs given('${job.fit.given}') as one of its parts.` };
+  const others = model.asm.filter(p => p !== G);
+  if (!others.length) return { msg: 'Now add your own part next to the given one.' };
+  const n = others.length > 1 ? { t: 'u', k: 0, c: others.map(o => o.n) } : others[0].n;
+  const mate = modelFrom({ n, b: others.reduce((a, o) => joinB(a, o.b), others[0].b) });
+  if (!analyseModel(mate, 56)) return { msg: 'Your part came out empty.' };
+  const T = jobModel(job), gap = gapBetween(mate, T, 110);
+  const contains = job.fit.contains.every(q => mate.f(...q) < 0);
+  const [lo, hi] = job.fit.gap, tol = 0.004;
+  const pass = contains && gap >= lo - tol && gap <= hi + tol;
+  const msg = pass ? 'within the fit' : !contains ? 'your part must pass through every check point' : gap < 0 ? `interference: ${(-gap).toFixed(2)} mm of overlap` : gap < lo ? 'too tight' : 'too loose';
+  return { mate, gap, contains, pass, msg };
+}
+function gradeFit() {
+  const J = activeJob, r = fitResult(J, cur), bar = $('#fitBar'), [lo, hi] = J.fit.gap;
+  cur.mate = r.mate || null;
+  lastFit = r.gap ?? null;
+  $('#fitNote').textContent = `Clearance must be ${lo.toFixed(2)}–${hi.toFixed(2)} mm everywhere, and your part must pass through ${J.fit.contains.length} check points. The bar's mark is the top of the band.`;
+  $('#fitLabel').textContent = `${J.name}: ${r.msg}`;
+  $('#fitNum').textContent = r.gap == null ? '' : r.gap >= 0 ? `gap ${r.gap.toFixed(2)} mm` : `overlap ${(-r.gap).toFixed(2)} mm`;
+  $('#fitFill').style.width = r.gap == null ? '0' : clamp(r.gap / (hi * 2), 0, 1) * 100 + '%';
+  $('#fitBar b').style.left = '50%';
+  bar.classList.toggle('pass', !!r.pass);
+  $('#tFit').textContent = r.gap == null ? '—' : r.gap.toFixed(2) + ' mm';
+  $('#tFit').classList.toggle('pass', !!r.pass);
+  if (r.pass && !stamped.has(J.id)) {
+    stamped.set(J.id, r.gap); saveStamps();
+    toast(`${J.name}: passed QC with a ${r.gap.toFixed(2)} mm gap`);
+    renderJobs();
+  }
+  setSheetMode('job');
 }
 let activeJob = null, lastFit = null;
 const stamped = new Map();
@@ -1933,17 +2250,18 @@ function renderJobs() {
   JOBS.forEach((j, i) => {
     if (i === 0 || tierOf(j) !== tierOf(JOBS[i - 1])) {
       const h = document.createElement('li'); h.className = 'tier';
-      h.innerHTML = tierOf(j) === 1 ? '<b>Tier I</b> · dimensioned · 98.5%' : `<b>Tier II</b> · sketches, no dimensions · 99.3%${t2 ? '' : ` · opens after ${TIER2_AT} Tier I stamps`}`;
+      const lock = t2 ? '' : ` · opens after ${TIER2_AT} Tier I stamps`;
+      h.innerHTML = tierOf(j) === 1 ? '<b>Tier I</b> · dimensioned · 98.5%' : tierOf(j) === 2 ? `<b>Tier II</b> · sketches, no dimensions · 99.3%${lock}` : `<b>Tier III</b> · fits against a given part${lock}`;
       ol.appendChild(h); n = 0;
     }
     n++;
-    const locked = (j.secret && !open) || (tierOf(j) === 2 && !t2);
+    const locked = (j.secret && !open) || (tierOf(j) >= 2 && !t2);
     const li = document.createElement('li'), b = document.createElement('button');
     b.type = 'button'; b.className = 'job' + (locked ? ' locked' : '');
     b.setAttribute('aria-current', activeJob === j ? 'true' : 'false');
     const done = stamped.has(j.id);
     const title = locked && j.secret ? '? ? ?' : j.name;
-    b.innerHTML = `<span class="no">${(tierOf(j) === 2 ? 'II·' : '') + String(n).padStart(2, '0')}</span><span class="nm">${title}</span>
+    b.innerHTML = `<span class="no">${(['', '', 'II·', 'III·'][tierOf(j)]) + String(n).padStart(2, '0')}</span><span class="nm">${title}</span>
       <span class="st ${done ? 'done' : ''}">${done ? 'Stamped' : locked ? 'Locked' : 'Open'}</span>
       <span class="bf">${j.brief}<span class="hint">${j.hint}</span></span>`;
     b.disabled = locked;
@@ -1951,7 +2269,8 @@ function renderJobs() {
     li.appendChild(b); ol.appendChild(li);
   });
   const t2done = JOBS.filter(j => tierOf(j) === 2 && stamped.has(j.id)).length;
-  $('#jobCount').textContent = `I ${regularDone()}/7` + (stamped.has('rook') ? ' ♜' : '') + ` · II ${t2done}/6`;
+  const t3done = JOBS.filter(j => tierOf(j) === 3 && stamped.has(j.id)).length;
+  $('#jobCount').textContent = `I ${regularDone()}/7` + (stamped.has('rook') ? ' ♜' : '') + ` · II ${t2done}/6 · III ${t3done}/3`;
 }
 function selectJob(j) {
   activeJob = j;
@@ -1963,6 +2282,7 @@ function grade() {
   const bar = $('#fitBar');
   if (!activeJob) { lastFit = null; $('#fitLabel').textContent = 'Pick a commission to be graded against it.'; $('#fitNum').textContent = ''; $('#fitFill').style.width = '0'; bar.classList.remove('pass'); $('#tFit').textContent = '—'; $('#tFit').classList.remove('pass'); return; }
   if (!cur || !cur.tight) return;
+  if (activeJob.fit) return gradeFit();
   const T = jobModel(activeJob);
   lastFit = fitScore(T, cur);
   const need = passOf(activeJob), pass = lastFit >= need;
@@ -2087,6 +2407,19 @@ rim.add(circle(16)).add(spoke, blend)
   .cut(circle(6))
   .extrude(6, 1)
 `,
+  'Pillow block (assembly)': `// An assembly: each named part gets a colour, and every pair's clearance is measured.
+// Push the shaft past the bore and watch the interference appear (cut along Y to see it).
+const bore   = param('bore Ø', 12, 8, 16);
+const shaftD = param('shaft Ø', 11.8, 7, 16);
+
+const block = box(40, 20, 24).add(box(64, 20, 6).move(0, 0, -9), 3)
+  .cut(cyl(bore, 30).rot(90, 0, 0).move(0, 0, 2))
+  .cut(cyl(6, 10).move(25, 0, -9).mirror('x'));
+const shaft = cyl(shaftD, 60).rot(90, 0, 0).move(0, 0, 2);
+const bolts = cyl(5.6, 16).move(25, 0, -7).mirror('x');
+
+assembly({ block, shaft, bolts })
+`,
   'Blank': `// Start here. Solids are centred on the origin, Z is up, sizes in mm.
 // The last line is the part.
 box(30, 20, 10)
@@ -2098,7 +2431,7 @@ box(30, 20, 10)
    Editor, params, status
    ===================================================================== */
 const src = $('#src'), hl = $('#hl');
-const DSL_FN = new Set(['box', 'cyl', 'sphere', 'cone', 'torus', 'hex', 'gyroid', 'union', 'param', 'rect', 'circle', 'arc', 'polygon', 'ngon', 'text']);
+const DSL_FN = new Set(['assembly', 'given', 'box', 'cyl', 'sphere', 'cone', 'torus', 'hex', 'gyroid', 'union', 'param', 'rect', 'circle', 'arc', 'polygon', 'ngon', 'text']);
 const KW = new Set(['const', 'let', 'var', 'return', 'for', 'if', 'else', 'function', 'of', 'new', 'true', 'false']);
 const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 function highlight() {
@@ -2146,13 +2479,17 @@ function fmtParam(p, v) { const d = Math.max(0, -Math.floor(Math.log10(p.step) +
 let runTimer = 0, runQueued = false;
 function scheduleRun(d = 180) { clearTimeout(runTimer); runTimer = setTimeout(runCode, d); }
 function runNow() { if (runQueued) return; runQueued = true; requestAnimationFrame(() => { runQueued = false; runCode(); }); }
-let analyseTimer = 0;
-function runCode() {
+let analyseTimer = 0, evalSeq = 0;
+async function runCode() {
   if (sharedPending) return;
   const code = src.value;
   try { localStorage.setItem('foundry.code', code); localStorage.setItem('foundry.name', state.partName); } catch {}
-  const t0 = performance.now();
-  const r = evaluate(code);
+  const t0 = performance.now(), id = ++evalSeq;
+  let r;
+  if (userBox) r = validResult(await userBox.run(code, Object.assign({}, paramVals)));
+  else { const x = evaluate(code, paramVals); r = x.error ? x : { params: x.params, vals: x.vals, shape: x.shape && { n: x.shape.n, b: x.shape.b }, asm: x.asm }; }
+  if (id !== evalSeq) return;   // a newer edit already started
+  if (!r.error) { paramSeen = r.params; paramVals = Object.assign(Object.create(null), r.vals); }
   if (r.error) {
     errLineNo = r.line; syncScroll();
     setStatus((r.line ? `line ${r.line}: ` : '') + r.error + ' (still showing the last good part)', 'err');
@@ -2160,17 +2497,18 @@ function runCode() {
   }
   errLineNo = null; syncScroll();
   let model;
-  try { model = modelFrom(r.shape); } catch (e) { setStatus(e.message, 'err'); return; }
+  try { model = modelFromResult(r); } catch (e) { setStatus(e.message, 'err'); return; }
   if (!gl) { setStatus('WebGL2 is not available in this browser, so the part cannot be drawn.', 'err'); return; }
-  const cached = programs.has(model.glsl.body);
-  model.entry = requestProgram(model.glsl.body);
-  pending = { entry: model.entry, U: model.glsl.U, bound: boundSphere(r.shape.b) };
+  const cached = programs.has(progKey(model.glsl));
+  model.entry = requestProgram(model.glsl);
+  applyExplode(model);
+  pending = { entry: model.entry, U: model.glsl.U, bound: boundSphere(pad(model.shape.b, model.asm ? explodeReach(model) : 0)) };
   const keep = cur && cur.tight;
   model.tight = keep ? cur.tight : null; model.volume = cur?.volume || 0; model.deepest = cur?.deepest || 0;
   cur = model;
-  renderParams();
+  renderParams(); renderAsm();
   const ms = (performance.now() - t0).toFixed(0);
-  setStatus(`cast in ${ms} ms · ${model.nodes} field nodes · ${cached ? 'same shader, new numbers' : 'new shader'}${model.glsl.inline ? ' · many numbers, baked in' : ''}`);
+  setStatus(`cast in ${ms} ms${userBox ? ' (sandboxed)' : ''} · ${model.asm ? model.asm.length + ' parts · ' : ''}${model.nodes} field nodes · ${cached ? 'same shader, new numbers' : 'new shader'}${model.glsl.inline ? ' · many numbers, baked in' : ''}`);
   clearTimeout(analyseTimer);
   analyseTimer = setTimeout(analyse, 90);
 }
@@ -2185,6 +2523,70 @@ function analyse() {
   dirty = true;
   grade();
   scheduleSheet();
+  if (cur.asm) { clearTimeout(clearTimer); clearTimer = setTimeout(computeClearance, 60); }
+}
+
+/* ---------- assemblies: explode, clearances ---------- */
+let clearTimer = 0;
+state.explode = 0;
+function explodeReach(m) { return Math.hypot(...sizeB(m.shape.b)) * 0.9; }
+function applyExplode(m) {
+  if (!m?.asm) return;
+  const C = centreB(m.shape.b), R = Math.hypot(...sizeB(m.shape.b)) / 2, e = state.explode;
+  m.asm.forEach((p, i) => {
+    const d = v3.sub(centreB(p.b), C), L = Math.hypot(...d);
+    p.off = L > R * 0.05 ? v3.mul(d, e * 1.2 * Math.min(1, R / L) * (1 + i * 0.1)) : [0, 0, i ? e * R * 0.5 * i : 0];
+    const o = m.glsl.offs[i]; m.glsl.U[o] = p.off[0]; m.glsl.U[o + 1] = p.off[1]; m.glsl.U[o + 2] = p.off[2];
+  });
+  m.fView = e > 0 ? (x, y, z) => { let d = Infinity; for (const p of m.asm) { const v = p.f(x - p.off[0], y - p.off[1], z - p.off[2]); if (v < d) d = v; } return d; } : null;
+}
+$('#explode').addEventListener('input', e => { state.explode = +e.target.value; if (cur) applyExplode(cur); touch(); });
+function partModel(p) {
+  if (!p.model) { p.model = { shape: { n: p.n, b: p.b }, f: p.f, tight: null }; analyseModel(p.model, 44); }
+  return p.model;
+}
+function surfacePoints(m, N) {
+  if (!m.verts || m.vertsN !== N) { m.verts = m.tight ? meshSurface(m.f, m.tight, N).verts : new Float32Array(0); m.vertsN = N; }
+  return m.verts;
+}
+// The gap between two solids is the smallest value one field takes on the other's surface. Negative means they overlap.
+function gapBetween(A, B, N = 80) {
+  let g = Infinity;
+  for (const [X, Y] of [[A, B], [B, A]]) { const v = surfacePoints(X, N); for (let i = 0; i < v.length; i += 3) { const d = Y.f(v[i], v[i + 1], v[i + 2]); if (d < g) g = d; } }
+  return g;
+}
+function overlapVolume(A, B) {
+  const b = meetB(A.tight, B.tight); if (b[3] <= b[0] || b[4] <= b[1] || b[5] <= b[2]) return 0;
+  const h = Math.max(...sizeB(b)) / 40; let v = 0;
+  for (let z = b[2] + h / 2; z < b[5]; z += h) for (let y = b[1] + h / 2; y < b[4]; y += h) for (let x = b[0] + h / 2; x < b[3]; x += h)
+    v += Math.min(clamp(0.5 - A.f(x, y, z) / h, 0, 1), clamp(0.5 - B.f(x, y, z) / h, 0, 1));
+  return v * h * h * h;
+}
+function computeClearance() {
+  const m = cur; if (!m?.asm) return;
+  const pm = m.asm.map(partModel), rows = [];
+  for (let i = 0; i < pm.length; i++) for (let j = i + 1; j < pm.length; j++) {
+    const A = pm[i], B = pm[j]; if (!A.tight || !B.tight) continue;
+    const near = pad(A.tight, 5);
+    if (near[3] < B.tight[0] || near[0] > B.tight[3] || near[4] < B.tight[1] || near[1] > B.tight[4] || near[5] < B.tight[2] || near[2] > B.tight[5]) continue;
+    const g = gapBetween(A, B);
+    if (g > 5) continue;
+    rows.push({ a: m.asm[i].name, b: m.asm[j].name, g, vol: g < -0.01 ? overlapVolume(A, B) : 0 });
+  }
+  if (m !== cur) return;
+  m.clear = rows; renderAsm();
+}
+function partColour(i) { const c = PALETTE[i % PALETTE.length]; return c ? `rgb(${c.map(v => Math.round(v * 255)).join(',')})` : state.mat.sw; }
+function renderAsm() {
+  const box = $('#asm');
+  box.hidden = !cur?.asm;
+  if (!cur?.asm) return;
+  $('#asmParts').innerHTML = cur.asm.map((p, i) => `<li><span><i style="background:${partColour(i)}"></i>${esc(p.name)}${p.tag ? ' <small>(given)</small>' : ''}</span><span>${p.model?.tight ? (p.model.volume / 1000).toFixed(2) + ' cm³' : ''}</span></li>`).join('');
+  const rows = cur.clear;
+  $('#asmClear').innerHTML = !rows ? '<li><span>measuring clearances…</span></li>' : !rows.length ? '<li class="ok"><span>No two parts within 5 mm</span><span>clear</span></li>'
+    : rows.map(r => r.g < -0.01 ? `<li class="bad"><span>⚠ ${esc(r.a)} ↔ ${esc(r.b)}</span><span>overlap ${(-r.g).toFixed(2)} mm · ${(r.vol / 1000).toFixed(3)} cm³</span></li>`
+      : r.g < 0.01 ? `<li><span>${esc(r.a)} ↔ ${esc(r.b)}</span><span>touching</span></li>`
+      : `<li class="ok"><span>${esc(r.a)} ↔ ${esc(r.b)}</span><span>gap ${r.g.toFixed(2)} mm</span></li>`).join('');
 }
 function loadCode(code, name, frame = true) {
   src.value = code; state.partName = name; paramVals = Object.create(null); paramSig = '';
@@ -2201,9 +2603,11 @@ for (const k of Object.keys(PRESETS)) { const o = document.createElement('option
 presetSel.addEventListener('change', () => { const k = presetSel.value; if (k) loadCode(PRESETS[k], k); presetSel.value = ''; });
 const b64e = s => { const b = new TextEncoder().encode(s); let t = ''; for (const c of b) t += String.fromCharCode(c); return btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)));
+const REPO = 'kimalale/foundry', HOST = 'https://kimalale.github.io/foundry/';
+const shareURL = (code, name) => (/^https?:$/.test(location.protocol) ? location.href.split('#')[0] : HOST) + '#c=' + b64e(code) + '&n=' + encodeURIComponent(name);
 $('#shareBtn').addEventListener('click', async () => {
-  const url = location.href.split('#')[0] + '#c=' + b64e(src.value) + '&n=' + encodeURIComponent(state.partName);
-  try { await navigator.clipboard.writeText(url); toast(location.protocol === 'file:' ? 'Link copied (it only opens on this machine until the page is hosted)' : 'Link copied'); }
+  const url = shareURL(src.value, state.partName);
+  try { await navigator.clipboard.writeText(url); toast('Link copied'); }
   catch { history.replaceState(null, '', url); toast('Link is in the address bar'); }
 });
 let sharedPending = false;
@@ -2258,6 +2662,8 @@ document.addEventListener('keydown', e => {
   else if (k === 's') setSection({ '': 'x', x: 'y', y: 'z', z: '' }[state.sec.axis]);
   else if (k === 'm') toggleMeasure();
   else if (k === 'e') exportSTL();
+  else if (k === 'c') mill.active ? stopMill() : startMill();
+  else if (k === ' ' && mill.active) $('#millPlay').click();
   else if (k === 'escape' && state.measure.on) { state.measure.a = state.measure.b = null; updateReadout(); drawOverlay(); }
   else return;
   e.preventDefault();
@@ -2265,9 +2671,319 @@ document.addEventListener('keydown', e => {
 let toastTimer = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600); }
 
+/* =====================================================================
+   Machining. Plan 3-axis toolpaths for the part, then cut them out of a
+   block of stock that is drawn as a heightfield (one height per cell,
+   seen from above, which is exactly what a 3-axis mill can reach).
+   ===================================================================== */
+const mill = { active: false, playing: false, plan: null, S: null, idx: 0, t: 0, tex: null, sh: null, speed: 80 };
+const FEEDS = { rapid: 6000, rough: 1500, finish: 1000 };   // mm per minute
+const TOOL_SIZES = [1, 1.5, 2, 3, 4, 6, 8, 10, 12];
+const pickTool = max => TOOL_SIZES.reduce((d, t) => t <= max ? t : d, TOOL_SIZES[0]);
+const MILL_G = {
+  pre: `uniform sampler2D uHeight; uniform vec3 uStockMin, uStockMax; uniform vec4 uTool; uniform float uToolBall, uToolLen, uCap;
+float dStock(vec3 p){
+  vec3 c=(uStockMin+uStockMax)*.5, h=(uStockMax-uStockMin)*.5;
+  vec2 uv=(p.xy-uStockMin.xy)/(uStockMax.xy-uStockMin.xy);
+  float e=p.z-texture(uHeight,clamp(uv,0.,1.)).r;
+  e = e>0. ? min(e*.4,uCap) : e*.4;   // a heightfield is not a true distance, so step cautiously
+  return max(sdBox(p-c,h), e);
+}
+float dTool(vec3 p){
+  vec3 q=p-uTool.xyz; float r=uTool.w;
+  if(uToolBall>.5) return min(length(q-vec3(0,0,r))-r, sdCyl(q-vec3(0,0,r+uToolLen*.5), r, uToolLen*.5));
+  return sdCyl(q-vec3(0,0,uToolLen*.5), r, uToolLen*.5);
+}`,
+  body: 'return min(dStock(p), dTool(p));',
+  post: 'vec3 surfaceColor(vec3 p, vec3 b){ return dTool(p)<dStock(p) ? vec3(.88,.70,.30) : b; }\nfloat overlapCount(vec3 p){ return 0.; }',
+};
+function toolComp(H, P, r, ball) {   // the lowest the tool tip may go at each cell without cutting into the part
+  const rc = Math.ceil(r / P.cell), offs = [];
+  for (let dj = -rc; dj <= rc; dj++) for (let di = -rc; di <= rc; di++) {
+    const d2 = (di * di + dj * dj) * P.cell * P.cell;
+    if (d2 <= r * r) offs.push(di, dj, ball ? Math.sqrt(r * r - d2) - r : 0);
+  }
+  const out = new Float32Array(P.nx * P.ny);
+  for (let j = 0; j < P.ny; j++) for (let i = 0; i < P.nx; i++) {
+    let m = -Infinity;
+    for (let k = 0; k < offs.length; k += 3) {
+      const ii = i + offs[k], jj = j + offs[k + 1];
+      if (ii < 0 || jj < 0 || ii >= P.nx || jj >= P.ny) continue;
+      const v = H[jj * P.nx + ii] + offs[k + 2]; if (v > m) m = v;
+    }
+    out[j * P.nx + i] = m;
+  }
+  return out;
+}
+function cutAt(S, P, x, y, z, tool) {   // lower the stock under the tool; returns the deepest bite
+  const r = tool.r, c = P.cell;
+  const i0 = Math.max(0, Math.floor((x - r - P.x0) / c)), i1 = Math.min(P.nx - 1, Math.ceil((x + r - P.x0) / c));
+  const j0 = Math.max(0, Math.floor((y - r - P.y0) / c)), j1 = Math.min(P.ny - 1, Math.ceil((y + r - P.y0) / c));
+  let bite = 0;
+  for (let j = j0; j <= j1; j++) { const dy = P.y0 + (j + 0.5) * c - y;
+    for (let i = i0; i <= i1; i++) { const dx = P.x0 + (i + 0.5) * c - x, d2 = dx * dx + dy * dy;
+      if (d2 > r * r) continue;
+      const zt = tool.ball ? z + r - Math.sqrt(r * r - d2) : z, k = j * P.nx + i;
+      if (S[k] > zt) { if (S[k] - zt > bite) bite = S[k] - zt; S[k] = zt; } } }
+  return bite;
+}
+function planMill(m) {
+  const b = m.tight, M = 3;
+  const P = { x0: b[0] - M, y0: b[1] - M, z0: b[2], top: b[5] + 1, W: b[3] - b[0] + 2 * M, D: b[4] - b[1] + 2 * M };
+  P.cell = Math.max(P.W, P.D) / 200; P.nx = Math.ceil(P.W / P.cell); P.ny = Math.ceil(P.D / P.cell);
+  P.W = P.nx * P.cell; P.D = P.ny * P.cell;
+  // 1. the part seen from above: the highest solid point in every column
+  const H = new Float32Array(P.nx * P.ny);
+  for (let j = 0; j < P.ny; j++) for (let i = 0; i < P.nx; i++) {
+    const x = P.x0 + (i + 0.5) * P.cell, y = P.y0 + (j + 0.5) * P.cell;
+    let z = P.top + 0.5, hz = P.z0;
+    for (let k = 0; k < 400; k++) { const d = m.f(x, y, z); if (d < 0.01) { hz = z; break; } z -= Math.max(d * 0.9, 0.01); if (z < P.z0) break; }
+    H[j * P.nx + i] = Math.max(hz, P.z0);
+  }
+  const rough = { name: 'Roughing', r: pickTool(Math.min(P.W, P.D) / 5) / 2, ball: false, feed: FEEDS.rough };
+  const fin = { name: 'Finishing', r: pickTool(Math.max(1, rough.r * 0.8)) / 2, ball: true, feed: FEEDS.finish };
+  P.ops = [rough, fin];
+  const S = new Float32Array(P.nx * P.ny).fill(P.top), pts = [], ops = [], safe = P.top + 3;
+  const look = (A, x, y) => A[clamp(Math.round((y - P.y0) / P.cell - 0.5), 0, P.ny - 1) * P.nx + clamp(Math.round((x - P.x0) / P.cell - 0.5), 0, P.nx - 1)];
+  let last = null;
+  const line = (list, op) => {   // keep a pass only if it actually removes material
+    let bite = 0; for (const q of list) bite = Math.max(bite, cutAt(S, P, q[0], q[1], q[2], P.ops[op]));
+    if (bite < 0.02) return false;
+    if (last) { pts.push(last[0], last[1], safe, list[0][0], list[0][1], safe); ops.push(-1, -1); }
+    for (const q of list) { pts.push(q[0], q[1], q[2]); ops.push(op); }
+    last = list[list.length - 1];
+    return true;
+  };
+  const raster = (op, stepover, zAt) => {
+    const t = P.ops[op]; let dir = 1;
+    for (let y = P.y0; y <= P.y0 + P.D + 1e-6; y += stepover) {
+      const list = [];
+      for (let x = P.x0 - t.r; x <= P.x0 + P.W + t.r + 1e-6; x += P.cell) list.push([x, y, zAt(x, y)]);
+      if (dir < 0) list.reverse();
+      if (line(list, op)) dir = -dir;
+    }
+  };
+  // 2. roughing: flat end mill, level by level, leaving 0.3 mm for the finish
+  const Hf = toolComp(H, P, rough.r, false), sd = Math.max(1, rough.r);
+  for (let lv = P.top - sd; ; lv -= sd) {
+    const L = Math.max(lv, P.z0);
+    raster(0, rough.r * 2 * 0.6, (x, y) => Math.min(P.top, Math.max(L, look(Hf, x, y) + 0.3)));
+    if (L <= P.z0) break;
+  }
+  // 3. finishing: ball end mill riding the part's surface
+  const Hb = toolComp(H, P, fin.r, true);
+  raster(1, Math.max(P.cell, fin.r * 0.4), (x, y) => Math.min(P.top, look(Hb, x, y)));
+  if (last) { pts.push(last[0], last[1], safe); ops.push(-1); }
+  P.path = new Float32Array(pts); P.op = Int8Array.from(ops); P.n = ops.length;
+  P.tcum = new Float32Array(P.n);
+  let t = 0, cutLen = 0;
+  for (let k = 1; k < P.n; k++) {
+    const d = Math.hypot(P.path[3 * k] - P.path[3 * k - 3], P.path[3 * k + 1] - P.path[3 * k - 2], P.path[3 * k + 2] - P.path[3 * k - 1]);
+    const feed = P.op[k] < 0 ? FEEDS.rapid : P.ops[P.op[k]].feed;
+    t += d / feed * 60; if (P.op[k] >= 0) cutLen += d;
+    P.tcum[k] = t;
+  }
+  P.total = t; P.cutLen = cutLen;
+  let vm = 0, removed = 0;
+  for (let k = 0; k < S.length; k++) { vm += S[k] - P.z0; removed += P.top - S[k]; }
+  const a = P.cell * P.cell;
+  P.removed = removed * a; P.undercut = Math.max(0, vm * a - m.volume); P.partVolume = m.volume;
+  return P;
+}
+const fmtTime = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), mm = Math.floor(sec / 60) % 60, ss = sec % 60; return (h ? h + ':' + String(mm).padStart(2, '0') : mm) + ':' + String(ss).padStart(2, '0'); };
+function uploadHeight() {
+  const P = mill.plan;
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, mill.tex);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, P.nx, P.ny, gl.RED, gl.FLOAT, mill.S);
+}
+function toolState() {
+  const P = mill.plan, k = Math.min(mill.idx, P.n - 1), prev = Math.max(0, k - 1);
+  const t0 = P.tcum[prev], t1 = P.tcum[k], f = t1 > t0 ? clamp((mill.t - t0) / (t1 - t0), 0, 1) : 1;
+  const pos = [0, 1, 2].map(c => P.path[3 * prev + c] + (P.path[3 * k + c] - P.path[3 * k + c - 3 * (k - prev)] ) * 0 + (P.path[3 * k + c] - P.path[3 * prev + c]) * f);
+  let op = P.op[k]; for (let q = k; op < 0 && q < P.n; q++) op = P.op[q];
+  return { pos, op: Math.max(op, 0) };
+}
+function startMill() {
+  if (!cur?.tight || !gl) { toast('Nothing to machine yet'); return; }
+  toast('Planning toolpaths…');
+  setTimeout(() => {
+    const t0 = performance.now(), P = planMill(cur);
+    mill.plan = P; mill.S = new Float32Array(P.nx * P.ny).fill(P.top); mill.idx = 0; mill.t = 0;
+    if (!mill.tex) mill.tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, mill.tex);
+    const lin = gl.getExtension('OES_texture_float_linear') ? gl.LINEAR : gl.NEAREST;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, lin); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, lin);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, P.nx, P.ny, 0, gl.RED, gl.FLOAT, mill.S);
+    const entry = requestProgram(MILL_G);
+    if (!finalize(entry)) { toast('The machining shader failed to compile'); return; }
+    const zb = P.z0 - 2, cz = (zb + P.top + 30) / 2;
+    mill.sh = { entry, U: [], ground: zb, bound: [P.x0 + P.W / 2, P.y0 + P.D / 2, cz, Math.hypot(P.W, P.D, P.top + 30 - zb) / 2 + 2],
+      extra(l) {
+        const ts = toolState(), tool = P.ops[ts.op];
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, mill.tex); gl.uniform1i(l.uHeight, 0);
+        gl.uniform3f(l.uStockMin, P.x0, P.y0, zb); gl.uniform3f(l.uStockMax, P.x0 + P.W, P.y0 + P.D, P.top);
+        gl.uniform4f(l.uTool, ts.pos[0], ts.pos[1], ts.pos[2], tool.r); gl.uniform1f(l.uToolBall, tool.ball ? 1 : 0);
+        gl.uniform1f(l.uToolLen, 30); gl.uniform1f(l.uCap, Math.max(P.cell * 2, 0.4)); gl.uniform1f(l.uNoAO, 1);
+      } };
+    mill.active = true; mill.playing = true;
+    $('#millBar').hidden = false; $('#millPlay').textContent = '❚❚'; $('#millBtn').setAttribute('aria-pressed', 'true');
+    state.hover = null; state.probe = null; updateReadout();
+    animateTo({ t: [P.x0 + P.W / 2, P.y0 + P.D / 2, (P.z0 + P.top) / 2], dist: Math.hypot(P.W, P.D, P.top - P.z0) * 1.25 });
+    millInfo(`planned in ${Math.round(performance.now() - t0)} ms`);
+    touch();
+  }, 30);
+}
+function stopMill() {
+  mill.active = false; mill.playing = false; $('#millBar').hidden = true; $('#millBtn').setAttribute('aria-pressed', 'false');
+  const f = frameTarget(); if (f) animateTo(f);
+  touch();
+}
+function millTo(t) {   // jump to a moment: replay the cut from the start
+  const P = mill.plan; mill.S.fill(P.top); mill.idx = 0;
+  while (mill.idx < P.n && P.tcum[mill.idx] <= t) { const k = mill.idx; if (P.op[k] >= 0) cutAt(mill.S, P, P.path[3 * k], P.path[3 * k + 1], P.path[3 * k + 2], P.ops[P.op[k]]); mill.idx++; }
+  mill.t = t; uploadHeight(); millInfo(); dirty = true;
+}
+function millStep(dt) {
+  const P = mill.plan; if (!mill.active || !mill.playing || !P) return;
+  const target = Math.min(P.total, mill.t + dt * mill.speed);
+  let changed = false;
+  while (mill.idx < P.n && P.tcum[mill.idx] <= target) {
+    const k = mill.idx;
+    if (P.op[k] >= 0) { cutAt(mill.S, P, P.path[3 * k], P.path[3 * k + 1], P.path[3 * k + 2], P.ops[P.op[k]]); changed = true; }
+    mill.idx++;
+  }
+  mill.t = target;
+  if (target >= P.total) { mill.playing = false; $('#millPlay').textContent = '▶'; }
+  if (changed) uploadHeight();
+  millInfo(); lastInteract = performance.now(); dirty = true;
+}
+function millInfo(extra) {
+  const P = mill.plan; if (!P) return;
+  const ts = toolState(), tool = P.ops[ts.op], done = mill.t >= P.total;
+  $('#millScrub').value = Math.round(mill.t / P.total * 1000);
+  const toolName = `Ø${+(tool.r * 2).toFixed(1)} ${tool.ball ? 'ball' : 'flat'} end mill`;
+  const uc = P.undercut > P.partVolume * 0.01 ? `<b>${(P.undercut / 1000).toFixed(2)} cm³ is out of reach from above</b> (side holes and overhangs need a second setup)` : 'everything is reachable from above';
+  $('#millInfo').innerHTML = done
+    ? `Machined in <b>${fmtTime(P.total)}</b> · removed ${(P.removed / 1000).toFixed(1)} cm³ · tools: Ø${P.ops[0].r * 2} flat, Ø${P.ops[1].r * 2} ball · ${uc}`
+    : `${tool.name} · ${toolName} · <b>${fmtTime(mill.t)}</b> of ${fmtTime(P.total)} · ${Math.round(mill.t / P.total * 100)}%${extra ? ' · ' + extra : ''}`;
+}
+$('#millBtn').addEventListener('click', () => mill.active ? stopMill() : startMill());
+$('#millExit').addEventListener('click', stopMill);
+$('#millPlay').addEventListener('click', () => {
+  if (!mill.plan) return;
+  if (mill.t >= mill.plan.total) millTo(0);
+  mill.playing = !mill.playing; $('#millPlay').textContent = mill.playing ? '❚❚' : '▶';
+});
+$('#millSpeed').addEventListener('change', e => { mill.speed = +e.target.value; });
+$('#millScrub').addEventListener('input', e => { if (!mill.plan) return; mill.playing = false; $('#millPlay').textContent = '▶'; millTo(+e.target.value / 1000 * mill.plan.total); });
+function drawToolpath() {   // the recent path, projected into the overlay
+  const P = mill.plan; if (!mill.active || !P) return;
+  const from = Math.max(1, mill.idx - 700);
+  octx.lineWidth = 1.2;
+  let prev = project([P.path[3 * from - 3], P.path[3 * from - 2], P.path[3 * from - 1]]);
+  for (let k = from; k < mill.idx; k++) {
+    const q = project([P.path[3 * k], P.path[3 * k + 1], P.path[3 * k + 2]]);
+    if (prev && q) {
+      const a = 0.15 + 0.75 * (k - from) / Math.max(1, mill.idx - from);
+      octx.strokeStyle = P.op[k] < 0 ? `rgba(160,170,180,${a * 0.6})` : P.op[k] === 0 ? `rgba(255,194,122,${a})` : `rgba(121,191,245,${a})`;
+      octx.setLineDash(P.op[k] < 0 ? [3, 4] : []);
+      octx.beginPath(); octx.moveTo(...prev); octx.lineTo(...q); octx.stroke();
+    }
+    prev = q;
+  }
+  octx.setLineDash([]);
+}
+
+/* =====================================================================
+   Community gallery. Submissions are GitHub issues on the repo whose
+   title starts with [part]; 👍 reactions are the votes. Every part is
+   built in its own sandbox before anything is drawn.
+   ===================================================================== */
+const gal = $('#gallery'), galBox = createSandbox();
+let galToken = 0;
+async function fetchCommunity() {
+  try { const c = JSON.parse(sessionStorage.getItem('foundry.gallery') || 'null'); if (c && Date.now() - c.t < 300000) return c.items; } catch {}
+  const res = await fetch(`https://api.github.com/repos/${REPO}/issues?state=open&per_page=60`, { headers: { Accept: 'application/vnd.github+json' } });
+  if (!res.ok) throw new Error(res.status === 403 ? 'GitHub is rate-limiting this network. Try again in a few minutes.' : `GitHub answered ${res.status}.`);
+  const items = (await res.json())
+    .filter(i => !i.pull_request && /^\[part\]/i.test(i.title || ''))
+    .map(i => {
+      const m = /#c=([A-Za-z0-9_-]{4,})/.exec(i.body || ''); let code = null;
+      try { code = m && b64d(m[1]); } catch {}
+      return { name: (i.title.replace(/^\[part\]\s*/i, '') || 'Untitled').slice(0, 48), user: (i.user && i.user.login) || '?', url: i.html_url,
+        likes: (i.reactions && i.reactions['+1']) || 0, date: i.created_at || '', code };
+    })
+    .filter(x => x.code && x.code.length < 20000)
+    .sort((a, b) => b.likes - a.likes || b.date.localeCompare(a.date));
+  try { sessionStorage.setItem('foundry.gallery', JSON.stringify({ t: Date.now(), items })); } catch {}
+  return items;
+}
+async function showGallery(tab) {
+  const tok = ++galToken, grid = $('#galGrid'), note = $('#galNote');
+  document.querySelectorAll('[data-gtab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.gtab === tab));
+  grid.innerHTML = '';
+  let items;
+  if (tab === 'featured') { items = Object.entries(PRESETS).map(([name, code]) => ({ name, code, featured: true })); note.textContent = 'The parts bin, drawn from its own code.'; }
+  else {
+    note.textContent = 'Loading submissions from GitHub…';
+    try { items = await fetchCommunity(); } catch (e) { if (tok === galToken) note.textContent = e.message; return; }
+    if (tok !== galToken) return;
+    note.textContent = items.length ? 'Parts people have submitted, most 👍 first. Each one is built in a sandbox. Vote with 👍 on its GitHub issue.'
+      : 'Nothing here yet. Be the first: build something and press "Submit this part".';
+  }
+  const cards = items.map(it => {
+    const el = document.createElement('article'); el.className = 'card';
+    const cv = document.createElement('canvas'); cv.width = 480; cv.height = 340;
+    const body = document.createElement('div');
+    const h = document.createElement('h3'); h.textContent = it.name; h.title = it.name;
+    const meta = document.createElement('p'); meta.textContent = it.featured ? 'Foundry parts bin' : `by @${it.user} · 👍 ${it.likes}`;
+    const row = document.createElement('div'); row.className = 'row';
+    const open = document.createElement('button'); open.className = 'btn'; open.type = 'button'; open.textContent = 'Open';
+    open.addEventListener('click', () => { gal.close(); loadCode(it.code, it.name); });
+    row.appendChild(open);
+    if (it.url) { const a = document.createElement('a'); a.href = it.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Vote / discuss ↗'; row.appendChild(a); }
+    body.append(h, meta, row); el.append(cv, body); grid.appendChild(el);
+    return { it, cv };
+  });
+  for (const { it, cv } of cards) {
+    if (tok !== galToken || !gal.open) return;
+    await thumbInto(it, cv);
+    await new Promise(r => setTimeout(r, 0));
+  }
+}
+async function thumbInto(it, cv) {
+  const x = cv.getContext('2d');
+  const say = t => { x.fillStyle = '#07080a'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#7f8b97'; x.font = '22px "B612 Mono", monospace'; x.textAlign = 'center'; x.fillText(t, cv.width / 2, cv.height / 2); };
+  say('casting…');
+  let r;
+  if (it.featured) { const e = evaluate(it.code, {}); r = e.error ? e : { asm: e.asm, shape: e.shape && { n: e.shape.n, b: e.shape.b } }; }
+  else r = galBox ? validResult(await galBox.run(it.code, {})) : { error: 'no sandbox' };
+  if (r.error) { say('does not build'); return; }
+  try {
+    const m = modelFromResult(r);
+    if (!analyseModel(m, 40)) { say('empty part'); return; }
+    const img = renderThumb(m, cv.width, cv.height);
+    if (img) x.putImageData(img, 0, 0); else say('shader error');
+  } catch { say('does not build'); }
+}
+$('#galleryBtn').addEventListener('click', () => { gal.showModal(); showGallery('featured'); });
+document.querySelectorAll('[data-gtab]').forEach(b => b.addEventListener('click', () => showGallery(b.dataset.gtab)));
+$('#galClose').addEventListener('click', () => gal.close());
+gal.addEventListener('close', () => galToken++);
+$('#galSubmit').addEventListener('click', () => {
+  const code = src.value, name = (state.partName || 'Untitled').slice(0, 48);
+  const body = `**[Open “${name}” in Foundry](${shareURL(code, name)})**\n\n` + (code.length < 5000 ? '```js\n' + code + '\n```\n\n' : '') + 'Submitted from Foundry. React with 👍 to vote for it.';
+  window.open(`https://github.com/${REPO}/issues/new?title=${encodeURIComponent('[part] ' + name)}&body=${encodeURIComponent(body)}`, '_blank', 'noopener');
+  toast('GitHub opens with your part filled in. Press "Create" to post it.');
+});
+
 /* ---------- the loop ---------- */
+let lastFrame = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
+  const dt = Math.min(0.1, (now - lastFrame) / 1000); lastFrame = now;
+  millStep(dt);
   if (pending && isReady(pending.entry)) {
     if (pending.entry.error) { setStatus('Shader failed to compile: ' + pending.entry.error.slice(0, 300), 'err'); }
     else { shown = pending; dirty = true; }
@@ -2293,7 +3009,8 @@ if (location.hash === '#selftest') { loadCode(PRESETS.Knob, 'Knob'); setTimeout(
 else if (hash.get('c')) {
   let code = null;
   try { code = b64d(hash.get('c')); } catch {}
-  if (code != null) {
+  if (code != null && userBox) { loadCode(code, (hash.get('n') || 'Shared part').slice(0, 48)); toast('Shared part opened. Its code runs in a sandbox.'); }
+  else if (code != null) {   // no Worker support: fall back to asking first
     src.value = code; state.partName = hash.get('n') || 'Shared part'; highlight();
     sharedPending = true; $('#shared').classList.add('on');
     setStatus('Shared code loaded but not run. It is JavaScript, so read it first.', 'warn');
@@ -2309,10 +3026,10 @@ requestAnimationFrame(frame);
    Self-test (open index.html#selftest): checks the maths, both
    backends against each other, meshing and every commission.
    ===================================================================== */
-function selftest() {
+async function selftest() {
   const out = [], ok = (c, m) => out.push((c ? 'PASS ' : 'FAIL ') + m);
   const near = (a, b, tol) => Math.abs(a - b) <= tol;
-  const M = code => { const r = evaluate(code); if (r.error) throw new Error(code + ': ' + r.error); const m = modelFrom(r.shape); analyseModel(m, 72); return m; };
+  const M = code => { const r = evaluate(code); if (r.error) throw new Error(code + ': ' + r.error); const m = modelFromResult(r); analyseModel(m, 72); return m; };
   try {
     let m = M('box(10)'); ok(near(m.volume, 1000, 15), `box(10) volume ${m.volume.toFixed(1)} ≈ 1000`);
     m = M('cyl(10, 10)'); ok(near(m.volume, 785.4, 12), `cyl(10,10) volume ${m.volume.toFixed(1)} ≈ 785.4`);
@@ -2324,7 +3041,7 @@ function selftest() {
     m = M('cone(20, 10, 10)'); ok(near(m.volume, Math.PI * 10 / 3 * (100 + 50 + 25), 20), `cone volume ${m.volume.toFixed(1)} ≈ ${(Math.PI * 10 / 3 * 175).toFixed(1)}`);
     m = M('box(10).mirror("x")'); ok(near(m.volume, 1000, 15), 'mirror of a centred cube is itself');
     // meshing: a sphere should close up (every edge shared by exactly two triangles)
-    const mesh = meshSurface(jsf(sphere(20).n), [-10, -10, -10, 10, 10, 10], 40), cnt = new Map();
+    const mesh = meshSurface(jsf(DSLAPI.sphere(20).n), [-10, -10, -10, 10, 10, 10], 40), cnt = new Map();
     for (let t = 0; t < mesh.tris.length; t += 3) for (let e = 0; e < 3; e++) {
       const a = mesh.tris[t + e], b = mesh.tris[t + (e + 1) % 3], k = a < b ? a * 1e7 + b : b * 1e7 + a; cnt.set(k, (cnt.get(k) || 0) + 1);
     }
@@ -2336,7 +3053,7 @@ function selftest() {
     // both backends must agree: compare a GPU silhouette with JS ray casts
     for (const [name, code] of Object.entries(PRESETS)) {
       const pm = M(code.replace(/param\('([^']+)',\s*([\d.]+)[^)]*\)/g, '$2'));
-      const e = requestProgram(pm.glsl.body);
+      const e = requestProgram(pm.glsl);
       if (!finalize(e)) { ok(false, `${name}: shader error ${e.error}`); continue; }
       const w = 48, hgt = 48, s = w / (Math.max(...sizeB(pm.tight)) * 1.2);
       const view = { ...ORTHO.front, orthoH: (hgt / 2) / s };
@@ -2354,8 +3071,8 @@ function selftest() {
       ok(diff <= w * hgt * 0.02 && hits > 20, `${name}: GPU and JS agree (${diff} of ${w * hgt} px differ, ${hits} hit)`);
       ok(pm.volume > 0, `${name}: volume ${(pm.volume / 1000).toFixed(2)} cm³`);
     }
-    for (const j of JOBS) {
-      const T = jobModel(j), e = requestProgram(T.glsl.body);
+    for (const j of JOBS.filter(j => !j.fit)) {
+      const T = jobModel(j), e = requestProgram(T.glsl);
       ok(finalize(e) && T.volume > 0, `${j.name}: target builds, ${(T.volume / 1000).toFixed(2)} cm³`);
       const self = fitScore(T, M(j.code + '.move(5, -3, 2)'));
       ok(self > 0.999, `${j.name}: moved copy fits ${(self * 100).toFixed(2)}%`);
@@ -2375,6 +3092,43 @@ function selftest() {
     const E5 = evaluate("text('ÆX', 5)"); ok(E5.error && /glyph/.test(E5.error), 'unknown glyph is reported');
     const off3 = fitScore(jobModel(JOBS.find(j => j.id === 'cam')), M('circle(32).add(circle(14).move(17.5, 0), 8).cut(circle(10)).extrude(8)'));
     ok(off3 < 0.993, `a 0.5 mm lobe error fails tier II (${(off3 * 100).toFixed(2)}%)`);
+    // the sandbox
+    if (userBox) {
+      let r = validResult(await userBox.run('box(10).add(sphere(8).move(5, 0, 0), 2)', {}));
+      ok(!!r.shape, 'sandbox builds a part');
+      r = validResult(await userBox.run("throw new Error(typeof document + ',' + typeof localStorage)", {}));
+      ok(r.error === 'undefined,undefined', `sandboxed code cannot see the page or its storage (${r.error})`);
+      r = validResult(await userBox.run('while (true) {}', {}, 600));
+      ok(/endless/.test(r.error || ''), 'an endless loop is stopped');
+      r = validResult(await userBox.run("param('w', 5, 1, 9); box(10)", { w: 7 }));
+      ok(!!r.shape && r.vals.w === 7 && r.params.length === 1, 'sandbox recovers and passes params through');
+    } else ok(false, 'no Worker sandbox available');
+    ok(!!validResult({ shape: { n: { t: 'box', a: ['1);}', 1, 1] }, b: [0, 0, 0, 1, 1, 1] } }).error, 'validator rejects text where numbers belong');
+    ok(!!validResult({ shape: { n: { t: 'evil', a: [1] }, b: [0, 0, 0, 1, 1, 1] } }).error, 'validator rejects unknown nodes');
+    ok(!!validResult({ shape: { n: { t: 'box', a: [1, 1, 1], extra: 'x' }, b: [0, 0, 0, 1, 1, 1] } }).error, 'validator rejects unexpected fields');
+    // assemblies
+    let am = M('assembly({ a: box(10), b: box(10).move(10.4, 0, 0) })'), pm = am.asm.map(partModel);
+    ok(near(gapBetween(pm[0], pm[1]), 0.4, 0.03), `assembly gap ${gapBetween(pm[0], pm[1]).toFixed(3)} ≈ 0.40`);
+    am = M('assembly({ a: box(10), b: box(10).move(9.5, 0, 0) })'); pm = am.asm.map(partModel);
+    const ig = gapBetween(pm[0], pm[1]), iv = overlapVolume(pm[0], pm[1]);
+    ok(near(ig, -0.5, 0.05) && near(iv, 50, 6), `interference ${ig.toFixed(3)} mm, ${iv.toFixed(1)} mm³ ≈ −0.5 mm, 50 mm³`);
+    for (const [id, code, want] of [
+      ['shaft', "assembly({ bushing: given('bushing'), shaft: cyl(9.6, 30) })", true],
+      ['shaft', "assembly({ bushing: given('bushing'), shaft: cyl(9.95, 30) })", false],
+      ['shaft', "assembly({ bushing: given('bushing'), shaft: cyl(9.6, 12) })", false],
+      ['keyed', "assembly({ hub: given('hub'), shaft: cyl(11.7, 24).add(box(3.7, 4, 24).move(0, 6.85, 0)) })", true],
+      ['keyed', "assembly({ hub: given('hub'), shaft: cyl(11.7, 24) })", false],
+      ['hexpeg', "assembly({ plate: given('plate'), peg: hex(11.7, 16) })", true],
+      ['hexpeg', "assembly({ plate: given('plate'), peg: hex(12.2, 16) })", false],
+    ]) {
+      const fr = fitResult(JOBS.find(j => j.id === id), M(code));
+      ok(!!fr.pass === want, `${id}: ${want ? 'good fit passes' : 'bad fit fails'} (gap ${fr.gap?.toFixed(3)}, ${fr.msg})`);
+    }
+    // machining
+    const P1 = planMill(M('box(20)'));
+    ok(P1.n > 50 && P1.undercut < 8000 * 0.02, `block machines fully (${P1.n} points, ${fmtTime(P1.total)}, undercut ${P1.undercut.toFixed(0)} mm³)`);
+    const P2 = planMill(M('box(20).cut(cyl(6, 30).rot(0, 90, 0))'));
+    ok(near(P2.undercut, Math.PI * 9 * 20, 120), `a side hole is out of reach from above (${P2.undercut.toFixed(0)} ≈ ${(Math.PI * 180).toFixed(0)} mm³)`);
     const E = evaluate('box(10).cut(3)'); ok(!!E.error, 'bad argument is reported: ' + E.error);
     const E2 = evaluate('const a = box(10);\nconst b = a.move("x");\nb'); ok(E2.error && E2.line === 2, `error line reported (${E2.line})`);
   } catch (e) { ok(false, 'threw: ' + e.stack); }
